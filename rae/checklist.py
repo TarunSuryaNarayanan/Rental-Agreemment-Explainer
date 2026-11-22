@@ -35,6 +35,7 @@ Ensures:
 """
 import os
 import re
+from .risk_classifier import predict_risk
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 # Simple title‑to‑key mapping used for category heading detection
@@ -61,7 +62,7 @@ KEY_TO_CATEGORY: Dict[str, str] = {v: k for k, v in CATEGORY_MAPPING.items()}
 CANONICAL_KEY_TERMS: Dict[str, str] = {
     "rent": "Rent amount, payment frequency and due date.",
     "deposit": "Security deposit amount, deductions and refund timeline.",
-    "lock_in": "Minimum mandatory tenancy period and early‑exit restrictions.",
+    "lock_in": "Minimum mandatory tenancy period and early-exit restrictions.",
     "notice_period": "Required advance notice before termination.",
     "termination": "Conditions and procedures for ending the agreement.",
     "rent_increase": "Rent escalation percentage, timing and conditions.",
@@ -72,6 +73,7 @@ CANONICAL_KEY_TERMS: Dict[str, str] = {
     "dispute_resolution": "Dispute settlement and court jurisdiction.",
     "police_verification": "Tenant police verification requirements.",
     "registration": "Stamp duty and registration requirements.",
+
 
 }
 
@@ -321,7 +323,7 @@ def check_missing(doc: str, clauses: Optional[List[dict]] = None) -> Dict[str, A
     key_terms: List[Dict[str, Any]] = []
     used_clause_ids: Set[int] = set()
     for key, spec in CHECKLIST_SPECS.items():
-        description = CANONICAL_KEY_TERMS[key]
+        description = CANONICAL_KEY_TERMS.get(key, "")
         category = spec.get("category", KEY_TO_CATEGORY.get(key, key.upper()))
         title = KEY_DISPLAY_TITLES.get(key, key)
         matched_clause = None
@@ -384,8 +386,11 @@ def check_missing(doc: str, clauses: Optional[List[dict]] = None) -> Dict[str, A
         else:
             quote = extract_relevant_quote(doc, key, doc)
             if validate_evidence(key, quote):
-                # Use full document to extract section reference (captures headings like "Section 14")
-                section_ref = extract_section_ref(doc)
+                # Use quote's own section reference when possible
+                if quote:
+                    section_ref = extract_section_ref(quote)
+                else:
+                    section_ref = extract_section_ref(doc)
                 has_blank = _has_unfilled_placeholders(quote)
                 has_val = bool(re.search(spec["value_pattern"], quote, re.I)) and not has_blank
                 is_inc = has_blank or (not has_val)
@@ -423,7 +428,42 @@ def check_missing(doc: str, clauses: Optional[List[dict]] = None) -> Dict[str, A
         presence = "Present" if status in ("Present", "Incomplete") else "Missing"
         completeness = "Complete" if status == "Present" else ("Incomplete" if status == "Incomplete" else "Missing")
         legal_compliance = "Compliant" if status == "Present" else ("Requires Review" if status == "Incomplete" else "Advisory Note")
-        risk_level = "Standard" if status == "Present" else ("Needs Details" if status == "Incomplete" else "Omission Risk")
+        # --------------------------------------------------------------------
+        # Model‑based risk classification (scikit‑learn pipeline)
+        # --------------------------------------------------------------------
+        # Prepare full clause text first, then ask the model for a risk label
+        src = quote if quote else doc
+        risk_level = predict_risk(src)
+        if key == "police_verification":
+            # Detect identity document collection
+            if re.search(r"\bidentity\s+documents?\b", src, re.I) or re.search(r"\baadhaar\b", src, re.I):
+                verification_type = "Identity Document Collection Only"
+            # Detect completed verification
+            elif re.search(r"\bpolice\s+verification\b", src, re.I) and re.search(r"\blocal\s+police\s+station\b", src, re.I):
+                verification_type = "Completed Police Verification at Local Station"
+            else:
+                verification_type = "Police Verification Requirement"
+        if key == "registration":
+            # Detect proof of registration
+            if re.search(r"\bregistered\s+as\b", src, re.I) or re.search(r"\bregistered\s+on\b", src, re.I):
+                registration_type = "Proof of Actual Registration"
+            # Detect contractual promise
+            elif re.search(r"\bstamp\s+duty\b", src, re.I) and re.search(r"\bregistration\b", src, re.I):
+                registration_type = "Contractual Promise to Register"
+            else:
+                registration_type = "Registration / Stamp Duty Covenant"
+        # Ensure section_ref captures a specific Section reference from the quote if possible
+        if section_ref == "Document Body":
+            # Try to find a Section reference within the quote itself
+            if quote:
+                matches = re.findall(r"\bSection\s*\d+\b", quote, re.I)
+                if matches:
+                    section_ref = matches[-1]  # use the last found
+            # Fallback to the first Section in the full document
+            if section_ref == "Document Body":
+                m = re.search(r"\bSection\s*\d+\b", doc, re.I)
+                if m:
+                    section_ref = m.group(0)
         item_data = {
             "key": key,
             "clause_type": key,
