@@ -1,0 +1,15 @@
+# Ignore Python byte‑code caches
+__pycache__/
+rae/__pycache__/
+rae/nlp/__pycache__/
+
+# Data / benchmark resources (not needed for the core analyzer)
+agreements/
+benchmark/
+generate_data.py
+train_model.py
+
+# Large model checkpoint directories and training artefacts – we keep only the top‑level files tracked via LFS
+models/**/checkpoint-*/
+models/**/training_args.bin
+models/**/generation_config.json
