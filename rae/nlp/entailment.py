@@ -46,10 +46,19 @@ def get_nli_pipeline():
     try:
         if os.getenv("RAE_MOCK", "0") == "1":
             return None
-        from transformers import pipeline
-        return pipeline("zero-shot-classification", model=NLI_MODEL, device=-1)
-    except Exception:
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
+        is_local = os.getenv("TRANSFORMERS_OFFLINE") == "1" or os.getenv("HF_HUB_OFFLINE") == "1"
+        try:
+            tok = AutoTokenizer.from_pretrained(NLI_MODEL, local_files_only=True)
+            mod = AutoModelForSequenceClassification.from_pretrained(NLI_MODEL, local_files_only=True)
+            return pipeline("zero-shot-classification", model=mod, tokenizer=tok, device=-1)
+        except Exception:
+            return pipeline("zero-shot-classification", model=NLI_MODEL, device=-1)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Could not load NLI pipeline (%s): %s", NLI_MODEL, e)
         return None
+
 
 
 def check_missing_nli(doc: str, fallback_fn=None) -> Dict[str, List[str]]:

@@ -1,0 +1,105 @@
+﻿clause_text,risk_label
+"Monthly rent of ₹32,000 payable on or before the 5th day of each month",Standard
+Monthly rent shall remain fixed throughout the initial tenancy period,Low
+Tenant must pay rent within five days of the due date,Medium
+Landlord may increase rent by 10 percent after every six months,High
+Landlord may increase rent by 20 percent at any time without notice,Critical
+Rent shall be paid through bank transfer to the landlord's nominated account,Standard
+Late rent payment shall attract a reasonable penalty of ₹200 per day,Medium
+Landlord may impose any additional rent amount without tenant approval,Critical
+Rent shall be revised only through mutual written agreement,Low
+Tenant must pay rent even if the property becomes uninhabitable due to landlord negligence,High
+"Tenant shall pay a refundable security deposit of ₹1,28,000",Standard
+Security deposit shall be refunded within 15 days after vacant possession is returned,Low
+Landlord may deduct documented repair costs from the security deposit,Standard
+Landlord may retain the entire security deposit without providing reasons,Critical
+Security deposit shall not carry interest during the tenancy,Standard
+Landlord may deduct any amount considered appropriate from the deposit,High
+Security deposit shall be refunded after adjustment of outstanding rent and utility bills,Standard
+Tenant shall pay a security deposit equivalent to ten months of rent,High
+Landlord may forfeit the entire deposit for any minor breach of agreement,Critical
+Security deposit deductions must be supported by invoices or written evidence,Low
+Both parties agree to a mandatory lock-in period of three months,Standard
+Tenant agrees to a mandatory lock-in period of 12 months without an early exit option,High
+Neither party may terminate during lock-in except by mutual written consent or as permitted by law,Standard
+Landlord may extend the lock-in period unilaterally,Critical
+Tenant may terminate during lock-in by paying one month's rent as agreed compensation,Medium
+Lock-in period shall automatically restart whenever rent is revised,High
+Tenant may terminate the agreement after lock-in by providing 30 days written notice,Standard
+Tenant must pay rent for the entire remaining tenancy even after the landlord breaches the agreement,Critical
+Lock-in conditions may be changed only through mutual written agreement,Low
+Tenant cannot leave the property under any circumstances during the lock-in period,High
+Either party may terminate after the lock-in period with 30 days written notice,Standard
+Tenant must provide 90 days written notice before vacating the property,Medium
+Landlord may terminate the tenancy immediately without providing notice or explanation,Critical
+Tenant must pay three months of rent if notice is shorter than the agreed period,High
+Landlord and tenant shall provide equal notice before ordinary termination,Low
+Landlord may waive the notice period at its sole discretion,Medium
+Tenant may terminate immediately if the property becomes unsafe or legally uninhabitable,Standard
+Tenant must continue paying rent for six months after submitting termination notice,Critical
+Notice of termination must be provided in writing through agreed communication channels,Low
+Landlord may reject any termination notice without giving a reason,High
+Landlord shall complete major structural repairs at its own expense,Standard
+Tenant shall be responsible for routine cleaning and household upkeep,Low
+Tenant shall be responsible for all structural repairs irrespective of cause,High
+Tenant must pay for damage directly caused by negligent use of the premises,Standard
+Landlord may refuse to repair major plumbing and electrical failures,Critical
+Tenant shall bear the cost of ordinary wear and tear,High
+Landlord shall maintain the building structure and essential facilities,Low
+Tenant must repair damage caused by natural disasters and ageing infrastructure,High
+All repair expenses shall be determined exclusively by the landlord,Critical
+Landlord and tenant shall notify each other promptly about necessary repairs,Standard
+Tenant shall pay electricity and water charges based on actual consumption,Standard
+"Tenant must pay electricity, water, gas, property tax and building insurance",High
+Landlord may impose unlimited additional utility charges without providing bills,Critical
+Tenant shall pay individually metered electricity and gas consumption charges,Low
+Tenant shall pay monthly maintenance charges as specified in the agreement,Standard
+Landlord may change utility charges without informing the tenant,High
+Tenant shall not be responsible for the landlord's personal expenses,Low
+Tenant must pay all building expenses demanded by the landlord,High
+Utility payments shall be supported by original bills or statements,Low
+Landlord may disconnect essential utilities for delayed rent payment without following applicable law,Critical
+Landlord must provide at least 48 hours prior written notice before routine inspection,Low
+Landlord may enter the property at any time without informing the tenant,High
+Landlord may enter without notice whenever the landlord wishes,Critical
+Landlord may enter immediately in a genuine emergency to prevent serious damage or danger,Standard
+Landlord must obtain tenant consent before conducting non-emergency inspections,Low
+Landlord may inspect the property every week without tenant approval,High
+Landlord shall respect tenant privacy and peaceful possession,Standard
+Landlord may install surveillance devices inside the rented premises without consent,Critical
+Inspection shall take place at a mutually agreed reasonable time,Low
+Landlord may enter the property whenever the tenant is absent,High
+Tenant shall not sublet the property without prior written permission,Standard
+Tenant may allow immediate family members to reside in the property,Low
+Tenant may transfer possession to another person without informing the landlord,High
+Tenant must obtain written consent before assigning the tenancy,Standard
+Landlord may prohibit all visitors from entering the premises,High
+Tenant shall use the property exclusively for residential purposes,Standard
+Tenant may accommodate guests for reasonable temporary stays,Low
+Tenant shall not permit any other person to occupy the premises under any circumstances,Medium
+Tenant may sublet the property without restrictions or approval,High
+Landlord may terminate the tenancy if the tenant hosts any visitor,Critical
+Tenant shall provide valid government-issued identity documents for police verification,Standard
+Tenant must provide updated address and contact details to the landlord,Low
+Landlord may retain tenant identity documents indefinitely,High
+Tenant must cooperate with lawful police verification procedures,Standard
+Landlord may disclose tenant identity documents publicly without consent,Critical
+Both parties shall complete stamp duty and registration as required by applicable law,Standard
+Tenant shall bear all registration costs regardless of any prior agreement,Medium
+Landlord refuses to cooperate with legally required registration,High
+Registration expenses shall be shared equally by both parties,Low
+Landlord may cancel the agreement without refunding any registration expenses,Critical
+Disputes shall first be resolved through mutual discussion and good-faith negotiation,Low
+All disputes shall be decided exclusively by the landlord,Critical
+Disputes shall be referred to a mutually agreed independent mediator,Standard
+Landlord may select any court in India regardless of the property's location,High
+Tenant shall have no right to challenge any decision made by the landlord,Critical
+Any modification to this agreement must be recorded in writing and signed by both parties,Low
+Landlord may modify any provision of this agreement verbally,High
+Landlord may change the agreement terms without tenant consent,Critical
+Both parties acknowledge that they have read and understood the agreement,Standard
+Landlord shall provide vacant and peaceful possession on the commencement date,Standard
+Landlord may delay possession indefinitely without compensation or explanation,High
+Tenant shall inspect the premises and record existing damage before taking possession,Low
+"Landlord shall provide keys, access cards and agreed fixtures at handover",Standard
+Tenant must accept possession even if essential facilities are unavailable,Critical

@@ -23,7 +23,7 @@ except Exception:
 
 EXPLAINER_MODEL_PATH = os.getenv(
     "RAE_EXPLAINER_MODEL",
-    str(pathlib.Path(__file__).parent.parent.parent / "models" / "flant5_explainer"),
+    str(pathlib.Path(__file__).resolve().parent.parent.parent / "models" / "flant5_explainer"),
 )
 
 _MODEL_LOCK = threading.Lock()
@@ -37,7 +37,10 @@ def get_explainer():
     if _CACHED_MODEL is not None:
         return _CACHED_MODEL, _CACHED_TOKENIZER
 
-    if not pathlib.Path(EXPLAINER_MODEL_PATH).exists():
+    model_dir = pathlib.Path(EXPLAINER_MODEL_PATH)
+    if not model_dir.exists():
+        import logging
+        logging.getLogger(__name__).warning("Explainer model directory does not exist at %s", EXPLAINER_MODEL_PATH)
         return None, None
 
     with _MODEL_LOCK:
@@ -57,35 +60,73 @@ def get_explainer():
             _CACHED_MODEL = model
             _CACHED_TOKENIZER = tokenizer
             return _CACHED_MODEL, _CACHED_TOKENIZER
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error("Failed to load fine-tuned Flan-T5 model from %s: %s", EXPLAINER_MODEL_PATH, e, exc_info=True)
             return None, None
 
 
-def explain_clause_local(clause_text: str, fallback_fn=None) -> str:
-    """Generate a plain-English Grade 8 explanation for a clause using the local model."""
+def _enrich_explanation(clause_text: str, base_explanation: str) -> str:
+    """Enhance the model explanation with specific clause parameters (amounts, periods, dates)."""
+    import re
+    amounts = re.findall(r'(?:Rs\.?|₹|INR)\s*[\d,]+(?:\s*/-)?(?:\s*\([^\)]+\))?', clause_text, re.I)
+    periods = re.findall(r'\b\d+\s*(?:\([^\)]+\)\s*)?(?:month|months|days|day|year|years)\b', clause_text, re.I)
+    dates = re.findall(r'\b\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\b', clause_text, re.I)
+
+    extras = []
+    if amounts:
+        extras.append(f"amount: {amounts[0].strip()}")
+    if periods:
+        extras.append(f"timeline: {', '.join(periods[:2]).strip()}")
+    if dates:
+        extras.append(f"date: {', '.join(dates[:2]).strip()}")
+
+    clean_base = base_explanation.rstrip(".")
+    if extras and "requirements" in clean_base:
+        return f"{clean_base} ({'; '.join(extras)})."
+    return base_explanation
+
+
+def explain_clauses_batch(clause_texts: list, fallback_fn=None) -> list:
+    """Generate plain-English Grade 8 explanations for multiple clauses in one batch."""
+    if not clause_texts:
+        return []
     model, tokenizer = get_explainer()
     if model is None or tokenizer is None:
-        if fallback_fn is not None:
-            return fallback_fn(clause_text)
-        return "This clause outlines requirements regarding this section of the tenancy agreement."
+        return [
+            fallback_fn(t) if fallback_fn is not None else "This clause outlines requirements regarding this section of the tenancy agreement."
+            for t in clause_texts
+        ]
 
     import torch
-    prompt = f"Explain this lease clause in Grade 8 English: {clause_text}"
+    prompts = [f"Explain this lease clause in Grade 8 English: {t}" for t in clause_texts]
     inputs = tokenizer(
-        prompt,
+        prompts,
         return_tensors="pt",
         max_length=256,
+        padding=True,
         truncation=True,
     )
     with _MODEL_LOCK:
         try:
             with torch.no_grad():
-                out = model.generate(
+                outs = model.generate(
                     **inputs,
                     max_new_tokens=64,
                 )
-                return tokenizer.decode(out[0], skip_special_tokens=True)
-        except Exception:
-            if fallback_fn is not None:
-                return fallback_fn(clause_text)
-            return "This clause outlines requirements regarding this section of the tenancy agreement."
+                raw_explanations = [tokenizer.decode(o, skip_special_tokens=True) for o in outs]
+                return [_enrich_explanation(t, exp) for t, exp in zip(clause_texts, raw_explanations)]
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("Inference failed in explainer model: %s. Using fallback.", e)
+            return [
+                fallback_fn(t) if fallback_fn is not None else "This clause outlines requirements regarding this section of the tenancy agreement."
+                for t in clause_texts
+            ]
+
+
+
+def explain_clause_local(clause_text: str, fallback_fn=None) -> str:
+    """Generate a plain-English Grade 8 explanation for a clause using the local model."""
+    res = explain_clauses_batch([clause_text], fallback_fn=fallback_fn)
+    return res[0] if res else "This clause outlines requirements regarding this section of the tenancy agreement."

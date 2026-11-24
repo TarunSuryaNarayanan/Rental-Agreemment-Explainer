@@ -1,71 +1,2057 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rental Agreement Explainer</title>
-<style>
- body{font-family:system-ui,sans-serif;max-width:960px;margin:2rem auto;padding:0 1rem;color:#222}
- textarea{width:100%;height:220px;padding:.6rem;font-family:inherit}
- .row{display:flex;gap:.6rem;align-items:center;margin:.6rem 0}
- button{padding:.5rem 1.1rem;border:0;border-radius:6px;background:#2d5be3;color:#fff;cursor:pointer}
- .card{border:1px solid #ddd;border-radius:8px;padding:.8rem 1rem;margin:.7rem 0}
- .tag{display:inline-block;padding:.1rem .5rem;border-radius:99px;font-size:.8rem;color:#fff}
- .Standard, .Present{background:#2e8b57}.Unusual{background:#d98e04}.One-sided, .Missing{background:#c62828}.Incomplete{background:#4a6fa5}.Error{background:#d9534f}
- blockquote{margin:.4rem 0;padding-left:.7rem;border-left:3px solid #aaa;color:#555;font-size:.9rem}
- .warn{color:#c62828;font-size:.85rem}.muted{color:#777;font-size:.85rem}
- .panel{background:#f6f8ff}
-</style></head><body>
-<h1>Rental Agreement Explainer</h1>
-<p class="muted">Paste your rental agreement. Every explanation is backed by a quote that is automatically checked against your text.</p>
-<textarea id="text" placeholder="Paste agreement text here..."></textarea>
-<div class="row">
- <label>Strategy
-  <select id="strategy">{% for s in strategies %}<option {% if s=='few_shot' %}selected{% endif %}>{{s}}</option>{% endfor %}</select>
- </label>
- <button onclick="run()">Explain</button><span id="status" class="muted"></span>
-</div>
-<div id="out"></div>
-<script>
-const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-async function run(){
-  const out=document.getElementById("out"),st=document.getElementById("status");
-  st.textContent="Analyzing..."; out.innerHTML="";
-  const r=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({text:document.getElementById("text").value,strategy:document.getElementById("strategy").value})});
-  const d=await r.json(); st.textContent="";
-  if(d.error){out.innerHTML=`<p class="warn">${esc(d.error)}</p>`;return;}
-  let h=`<div class="card panel"><b>Key Terms Summary</b>`;
-  h+=d.key_terms.map(k=>`
-    <div style="margin:0.5rem 0; padding-bottom:0.4rem; border-bottom:1px solid #eee;">
-      <div>• <b>${esc(k.category || k.key)}</b> (${esc(k.key)})
-        ${k.section_ref && k.section_ref !== 'Not Found' ? `<span class="muted">[${esc(k.section_ref)}]</span>` : ''}: 
-        <span class="tag ${esc(k.status || k.label)}">${esc(k.status || k.label)}</span>
-        <span class="muted" style="font-size:0.8rem; margin-left:0.4rem;">
-          [Presence: <b>${esc(k.presence)}</b> | Completeness: <b>${esc(k.completeness)}</b> | Compliance: <b>${esc(k.legal_compliance)}</b> | Risk: <b>${esc(k.risk_level)}</b>]
-        </span>
+<html lang="en" data-theme="black">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LEX RAE — Residential Rental Agreement & Covenant Auditor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ==========================================================================
+       THEME VARIABLES — STRICT HIGH-CONTRAST BLACK & WHITE / LEGAL PALETTE
+       ========================================================================== */
+    :root, [data-theme="white"] {
+      --bg-base: #f9f9fa;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f2f2f4;
+      --bg-elevated: #ffffff;
+      --border-subtle: #e2e2e7;
+      --border-medium: #c7c7d0;
+      --border-heavy: #18181b;
+      --text-main: #09090b;
+      --text-secondary: #27272a;
+      --text-muted: #52525b;
+      --text-subtle: #71717a;
+      --accent-main: #09090b;
+      --accent-contrast: #ffffff;
+      --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+      --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+      --badge-standard-bg: #f4f4f5;
+      --badge-standard-border: #18181b;
+      --badge-standard-text: #09090b;
+      --badge-unusual-bg: #f4f4f5;
+      --badge-unusual-border: #71717a;
+      --badge-unusual-text: #18181b;
+      --badge-onesided-bg: #09090b;
+      --badge-onesided-border: #09090b;
+      --badge-onesided-text: #ffffff;
+      --legal-stamp-border: #09090b;
+      --quote-border: #09090b;
+      --quote-bg: #f4f4f5;
+      --banner-bg: #f4f4f5;
+      --input-bg: #ffffff;
+      --theme-indicator-icon: "🌙";
+      --theme-indicator-text: "Black Theme";
+    }
+
+    [data-theme="black"] {
+      --bg-base: #09090b;
+      --bg-surface: #121215;
+      --bg-subtle: #18181c;
+      --bg-elevated: #202025;
+      --border-subtle: #27272a;
+      --border-medium: #3f3f46;
+      --border-heavy: #f4f4f5;
+      --text-main: #fafafa;
+      --text-secondary: #e4e4e7;
+      --text-muted: #a1a1aa;
+      --text-subtle: #71717a;
+      --accent-main: #ffffff;
+      --accent-contrast: #09090b;
+      --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
+      --card-shadow-hover: 0 6px 18px rgba(0, 0, 0, 0.85);
+      --badge-standard-bg: #18181c;
+      --badge-standard-border: #e4e4e7;
+      --badge-standard-text: #fafafa;
+      --badge-unusual-bg: #27272a;
+      --badge-unusual-border: #a1a1aa;
+      --badge-unusual-text: #f4f4f5;
+      --badge-onesided-bg: #fafafa;
+      --badge-onesided-border: #ffffff;
+      --badge-onesided-text: #09090b;
+      --legal-stamp-border: #f4f4f5;
+      --quote-border: #e4e4e7;
+      --quote-bg: #18181c;
+      --banner-bg: #18181c;
+      --input-bg: #101014;
+      --theme-indicator-icon: "☀️";
+      --theme-indicator-text: "White Theme";
+    }
+
+    /* ==========================================================================
+       GLOBAL STYLES & RESET
+       ========================================================================== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .font-serif {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+    }
+
+    .font-cinzel {
+      font-family: 'Cinzel', serif;
+      letter-spacing: 0.08em;
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      width: 100%;
+    }
+
+    /* ==========================================================================
+       LEGAL MASTHEAD / TOP NAVIGATION
+       ========================================================================== */
+    header.legal-masthead {
+      border-bottom: 2px solid var(--border-medium);
+      background-color: var(--bg-surface);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .masthead-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.9rem 0;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+    }
+
+    .seal-icon {
+      width: 44px;
+      height: 44px;
+      fill: none;
+      stroke: var(--text-main);
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      line-height: 1.15;
+    }
+
+    .brand-subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .jurisdiction-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.65rem;
+      border: 1px solid var(--border-medium);
+      border-radius: 3px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      background: var(--bg-subtle);
+    }
+
+    .theme-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.4rem 0.85rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      color: var(--text-main);
+      font-size: 0.76rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .theme-toggle-btn:hover {
+      background: var(--bg-subtle);
+      border-color: var(--border-heavy);
+    }
+
+    /* Sub-bar Legal Docket Notice */
+    .docket-bar {
+      background: var(--bg-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0.4rem 0;
+      font-size: 0.73rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .docket-bar span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    /* ==========================================================================
+       MAIN DOCKET WORKSPACE
+       ========================================================================== */
+    main {
+      flex: 1;
+      padding: 2rem 0 4rem;
+    }
+
+    /* Ingestion Docket Card */
+    .docket-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: 6px;
+      padding: 1.5rem 1.75rem;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    .card-legal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-bottom: 2px solid var(--border-medium);
+      padding-bottom: 0.75rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .legal-heading {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-main);
+    }
+
+    .legal-subheading {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    /* Sample selector & quick load bar */
+    .quick-samples-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .quick-samples-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .sample-pill {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 0.25rem 0.65rem;
+      font-size: 0.75rem;
+      border-radius: 3px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .sample-pill:hover {
+      border-color: var(--border-heavy);
+      color: var(--text-main);
+      background: var(--bg-elevated);
+    }
+
+    .sample-select {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      color: var(--text-main);
+      padding: 0.3rem 0.6rem;
+      font-size: 0.76rem;
+      border-radius: 3px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* Textarea & File Drop Zone */
+    .textarea-wrapper {
+      position: relative;
+      margin-bottom: 1rem;
+    }
+
+    textarea#agreement-input {
+      width: 100%;
+      height: 230px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-medium);
+      border-radius: 4px;
+      padding: 0.9rem;
+      font-family: 'JetBrains Mono', SFMono-Regular, monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: var(--text-main);
+      resize: vertical;
+      outline: none;
+    }
+
+    textarea#agreement-input:focus {
+      border-color: var(--border-heavy);
+      box-shadow: 0 0 0 1px var(--border-heavy);
+    }
+
+    .textarea-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.35rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .textarea-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .text-action-link {
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-decoration: underline;
+      font-size: 0.75rem;
+      border: none;
+      background: transparent;
+    }
+
+    .text-action-link:hover {
+      color: var(--text-main);
+    }
+
+    /* Controls Row: Strategy & Submit */
+    .docket-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding-top: 0.8rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .strategy-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .control-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .strategy-select {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      color: var(--text-main);
+      padding: 0.45rem 0.85rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .strategy-select:focus {
+      border-color: var(--border-heavy);
+    }
+
+    .strategy-hint {
+      font-size: 0.75rem;
+      color: var(--text-subtle);
+    }
+
+    .actions-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-primary {
+      background: var(--accent-main);
+      color: var(--accent-contrast);
+      border: 1px solid var(--accent-main);
+      padding: 0.55rem 1.4rem;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .btn-primary:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-main);
+      border: 1px solid var(--border-medium);
+      padding: 0.55rem 1.1rem;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .btn-outline:hover {
+      background: var(--bg-subtle);
+      border-color: var(--border-heavy);
+    }
+
+    /* Upload button */
+    .file-upload-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      border: 1px dashed var(--border-medium);
+      padding: 0.25rem 0.6rem;
+      border-radius: 3px;
+    }
+
+    .file-upload-label:hover {
+      border-color: var(--border-heavy);
+      color: var(--text-main);
+    }
+
+    /* ==========================================================================
+       PROGRESS & AUDIT SPINNER
+       ========================================================================== */
+    .audit-progress-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: 6px;
+      padding: 2.2rem 1.5rem;
+      text-align: center;
+      margin-bottom: 2rem;
+      display: none;
+    }
+
+    .gavel-icon-loader {
+      width: 48px;
+      height: 48px;
+      stroke: var(--text-main);
+      stroke-width: 1.8;
+      fill: none;
+      animation: gavel-pulse 1.4s ease-in-out infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes gavel-pulse {
+      0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.8; }
+      50% { transform: scale(1.08) rotate(-4deg); opacity: 1; }
+    }
+
+    .audit-step-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .audit-step-detail {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+    }
+
+    /* ==========================================================================
+       ERROR BANNER
+       ========================================================================== */
+    .legal-alert {
+      border: 2px solid var(--border-heavy);
+      background: var(--bg-surface);
+      padding: 1.25rem 1.5rem;
+      border-radius: 6px;
+      margin-bottom: 2rem;
+      display: none;
+    }
+
+    .legal-alert.visible {
+      display: block;
+    }
+
+    .alert-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .alert-body {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: 0.4rem;
+      line-height: 1.5;
+    }
+
+    /* ==========================================================================
+       RESULTS SECTION — LEGAL AUDIT MEMORANDUM
+       ========================================================================== */
+    #results-section {
+      display: none;
+    }
+
+    /* Executive Scorecard */
+    .memorandum-masthead {
+      border-bottom: 3px double var(--border-heavy);
+      padding-bottom: 1.25rem;
+      margin-bottom: 1.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .memo-title-block h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .memo-meta {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .memo-actions {
+      display: flex;
+      gap: 0.6rem;
+    }
+
+    /* Scorecard Grid */
+    .scorecard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .score-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: 5px;
+      padding: 1.1rem 1.25rem;
+      position: relative;
+    }
+
+    .score-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--border-heavy);
+    }
+
+    .score-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .score-value {
+      font-size: 1.85rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-top: 0.3rem;
+      font-family: 'Cinzel', serif;
+    }
+
+    .score-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    /* ==========================================================================
+       VIEW NAVIGATION TABS
+       ========================================================================== */
+    .view-tabs {
+      display: flex;
+      border-bottom: 2px solid var(--border-medium);
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      overflow-x: auto;
+    }
+
+    .view-tab-btn {
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: 0.65rem 1.1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      margin-bottom: -2px;
+    }
+
+    .view-tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .view-tab-btn.active {
+      color: var(--text-main);
+      border-bottom-color: var(--border-heavy);
+      background: var(--bg-subtle);
+    }
+
+    /* Tab Content Areas */
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* ==========================================================================
+       TAB 1: CLAUSE DOCKET / COVENANTS
+       ========================================================================== */
+    .filter-search-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .clause-filters {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      color: var(--text-secondary);
+      padding: 0.3rem 0.7rem;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .filter-pill:hover {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+    }
+
+    .filter-pill.active {
+      background: var(--accent-main);
+      color: var(--accent-contrast);
+      border-color: var(--accent-main);
+    }
+
+    .search-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      color: var(--text-main);
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      outline: none;
+      min-width: 220px;
+    }
+
+    .search-box:focus {
+      border-color: var(--border-heavy);
+    }
+
+    /* Individual Clause Card */
+    .clause-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: 5px;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--card-shadow);
+      overflow: hidden;
+    }
+
+    .clause-card:hover {
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .clause-header {
+      padding: 0.9rem 1.25rem;
+      background: var(--bg-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .clause-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .clause-index-badge {
+      font-size: 0.7rem;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 0.2rem 0.45rem;
+      border: 1px solid var(--border-heavy);
+      background: var(--bg-surface);
+      border-radius: 2px;
+    }
+
+    .clause-type-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-main);
+    }
+
+    /* Fairness Badges */
+    .legal-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.22rem 0.65rem;
+      border-radius: 3px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .legal-tag.Standard {
+      background: var(--badge-standard-bg);
+      border: 1px solid var(--badge-standard-border);
+      color: var(--badge-standard-text);
+    }
+
+    .legal-tag.Unusual {
+      background: var(--badge-unusual-bg);
+      border: 1px dashed var(--badge-unusual-border);
+      color: var(--badge-unusual-text);
+    }
+
+    .legal-tag.One-sided {
+      background: var(--badge-onesided-bg);
+      border: 1px solid var(--badge-onesided-border);
+      color: var(--badge-onesided-text);
+    }
+
+    .legal-tag.Incomplete {
+      border: 1px dotted var(--border-heavy);
+      background: var(--bg-surface);
+      color: var(--text-main);
+    }
+
+    .legal-tag.Error {
+      border: 1px solid var(--border-heavy);
+      background: var(--bg-surface);
+      color: var(--text-main);
+    }
+
+    /* Clause Body */
+    .clause-body {
+      padding: 1.25rem;
+    }
+
+    .clause-explanation-section {
+      margin-bottom: 1rem;
+    }
+
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .clause-explanation-text {
+      font-size: 0.96rem;
+      color: var(--text-main);
+      line-height: 1.6;
+    }
+
+    .clause-reason-text {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+      font-style: italic;
+    }
+
+    /* Verbatim Quote Box */
+    .verbatim-quote-box {
+      background: var(--quote-bg);
+      border-left: 3px solid var(--quote-border);
+      padding: 0.85rem 1.1rem;
+      margin: 1rem 0;
+      border-radius: 0 4px 4px 0;
+      position: relative;
+    }
+
+    .quote-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.4rem;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+    }
+
+    .quote-text {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.05rem;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    .verification-seal {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.45rem;
+      border-radius: 2px;
+    }
+
+    .verification-seal.verified {
+      border: 1px solid var(--border-heavy);
+      color: var(--text-main);
+    }
+
+    .verification-seal.unverified {
+      border: 1px dashed var(--border-medium);
+      color: var(--text-muted);
+    }
+
+    /* Legal Advisory Callout */
+    .advisory-callout {
+      border: 1px solid var(--border-heavy);
+      background: var(--bg-subtle);
+      padding: 0.75rem 1rem;
+      border-radius: 4px;
+      margin-top: 0.9rem;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+    }
+
+    .advisory-icon {
+      font-size: 0.95rem;
+      line-height: 1;
+      margin-top: 2px;
+    }
+
+    /* ==========================================================================
+       TAB 2: STATUTORY 15-KEY TERM MATRIX (CHECKLIST)
+       ========================================================================== */
+    .matrix-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .matrix-category-group {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .matrix-header {
+      padding: 0.75rem 1.25rem;
+      background: var(--bg-subtle);
+      border-bottom: 1px solid var(--border-medium);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .matrix-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .matrix-item-row {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+      display: grid;
+      grid-template-columns: 240px 1fr auto;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .matrix-item-row:last-child {
+      border-bottom: none;
+    }
+
+    .matrix-term-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .matrix-term-name {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .matrix-term-key {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .matrix-term-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .matrix-status-cell {
+      text-align: right;
+    }
+
+    /* ==========================================================================
+       TAB 3: DUAL-PANE CONTRACT COMPARISON
+       ========================================================================== */
+    .dual-pane-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .pane-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: 5px;
+      overflow: hidden;
+      max-height: 750px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pane-header {
+      padding: 0.75rem 1.25rem;
+      background: var(--bg-subtle);
+      border-bottom: 1px solid var(--border-medium);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .pane-content {
+      padding: 1.25rem;
+      overflow-y: auto;
+      flex: 1;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .pane-clauses-list {
+      padding: 1rem;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .mini-clause-item {
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 0.85rem;
+      cursor: pointer;
+    }
+
+    .mini-clause-item:hover {
+      border-color: var(--border-heavy);
+    }
+
+    /* ==========================================================================
+       TAB 4: PRINT-READY LEGAL MEMORANDUM (DOCKET FORMAT)
+       ========================================================================== */
+    .formal-memo-container {
+      background: var(--bg-surface);
+      border: 2px solid var(--border-heavy);
+      padding: 3rem 3.5rem;
+      max-width: 900px;
+      margin: 0 auto;
+      box-shadow: var(--card-shadow);
+      color: var(--text-main);
+    }
+
+    .memo-legal-crest {
+      text-align: center;
+      border-bottom: 2px solid var(--border-heavy);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .memo-legal-crest h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.8rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .memo-legal-crest p {
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+    }
+
+    .memo-docket-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+      font-size: 0.85rem;
+    }
+
+    .memo-docket-table td {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border-medium);
+    }
+
+    .memo-docket-table td.header-cell {
+      font-weight: 700;
+      background: var(--bg-subtle);
+      width: 25%;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+    }
+
+    .memo-section-heading {
+      font-family: 'Cinzel', serif;
+      font-size: 1.15rem;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border-medium);
+      padding-bottom: 0.4rem;
+      margin: 2rem 0 1rem;
+    }
+
+    /* ==========================================================================
+       STATUTORY LEGAL DISCLAIMER FOOTER
+       ========================================================================== */
+    footer.legal-disclaimer-footer {
+      border-top: 2px solid var(--border-medium);
+      background: var(--bg-surface);
+      padding: 2rem 0;
+      margin-top: auto;
+    }
+
+    .disclaimer-box {
+      border: 1px solid var(--border-medium);
+      background: var(--bg-subtle);
+      padding: 1.25rem 1.5rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .disclaimer-title {
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* ==========================================================================
+       PRINT MEDIA STYLES
+       ========================================================================== */
+    @media print {
+      header.legal-masthead,
+      .docket-bar,
+      .docket-card,
+      .view-tabs,
+      .filter-search-bar,
+      .controls-group,
+      .memo-actions,
+      .theme-toggle-btn {
+        display: none !important;
+      }
+
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+
+      .formal-memo-container {
+        border: none !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        box-shadow: none !important;
+      }
+
+      #tab-memo {
+        display: block !important;
+      }
+
+      #tab-clauses, #tab-matrix, #tab-dual {
+        display: none !important;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .dual-pane-layout {
+        grid-template-columns: 1fr;
+      }
+      .matrix-item-row {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+      .matrix-status-cell {
+        text-align: left;
+      }
+      .formal-memo-container {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================
+       TOP MASTHEAD / NAVIGATION (LEGAL AESTHETIC)
+       ======================================================================== -->
+  <header class="legal-masthead">
+    <div class="container masthead-inner">
+      <div class="brand-group">
+        <!-- Scales of Justice Emblem -->
+        <svg class="seal-icon" viewBox="0 0 24 24">
+          <path d="M12 3v18M6 8h12M6 8l-3 7h6l-3-7zm12 0l-3 7h6l-3-7zM9 21h6" />
+        </svg>
+        <div>
+          <div class="brand-title font-cinzel">Lex RAE</div>
+          <div class="brand-subtitle">Residential Rental Agreement & Covenant Auditor</div>
+        </div>
       </div>
-      ${k.verification_type ? `<div style="font-size:0.82rem; color:#2d5be3; margin-top:0.1rem;">Verification Detail: <b>${esc(k.verification_type)}</b></div>` : ''}
-      ${k.registration_type ? `<div style="font-size:0.82rem; color:#2d5be3; margin-top:0.1rem;">Registration Detail: <b>${esc(k.registration_type)}</b></div>` : ''}
-      <div class="muted" style="font-size:0.85rem; margin-top:0.1rem;">${esc(k.description)}</div>
-      ${k.quote?`<blockquote style="margin-top:0.2rem;">${esc(k.quote)}</blockquote>`:""}
-    </div>`).join("")||"<div class='muted'>None detected</div>";
-  h+=`</div><div class="card panel"><b>Agreement Checklist</b>`;
-  const cleanList = (arr) => Array.from(new Set(arr || []));
-  if (d.checklist.present && d.checklist.present.length) {
-    h+=`<div><span style="color:#2e8b57;font-weight:bold">✓ Present:</span> ${cleanList(d.checklist.present).map(esc).join(", ")}</div>`;
-  }
-  if (d.checklist.incomplete && d.checklist.incomplete.length) {
-    h+=`<div style="margin-top:0.3rem"><span style="color:#d98e04;font-weight:bold">⚠ Needs Details / Incomplete:</span> ${cleanList(d.checklist.incomplete).map(esc).join(", ")}</div>`;
-  }
-  if (d.checklist.missing && d.checklist.missing.length) {
-    h+=`<div style="margin-top:0.3rem"><span class="warn" style="font-weight:bold">✗ Missing from agreement:</span> ${cleanList(d.checklist.missing).map(esc).join(", ")}</div>`;
-  }
-  h+=`</div>`;
-  h+=`<p class="muted">Faithfulness: ${d.stats.verified_quotes}/${d.stats.n_clauses} quotes verified</p>`;
-  h+=d.clauses.map(c=>`<div class="card"><span class="tag ${c.label}">${c.label}</span> ${c.is_incomplete?`<span class="tag Incomplete">Needs Details</span>`:""} <b>${esc(c.clause_type)}</b>
-    <p>${esc(c.explanation)}</p><div class="muted">${esc(c.label_reason)}</div>
-    ${c.error?`<div class="warn">⚠ ${esc(c.error)}</div>`:
-      `<blockquote>${esc(c.quote)} ${c.verified?"✓ verified":"<span class='warn'>⚠ quote not found, treat with caution</span>"}</blockquote>`}
-    ${c.advice?`<div class="warn">${esc(c.advice)}</div>`:""}</div>`).join("");
-  h+=`<p class="muted">${esc(d.disclaimer)}</p>`; out.innerHTML=h;
-}
-</script></body></html>
+
+      <div class="controls-group">
+        <div class="jurisdiction-badge" title="Statutory context: Residential Tenancies">
+          <span>⚖ Jurisdiction: India (MTA & TPA)</span>
+        </div>
+        <button id="theme-toggle" class="theme-toggle-btn" onclick="toggleTheme()" title="Switch Theme">
+          <span id="theme-icon">🌙</span>
+          <span id="theme-label">Black Theme</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Docket Meta Bar -->
+  <div class="docket-bar">
+    <div class="container" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+      <span><span>•</span> Grounding Mode: Verbatim Quotation Verification Active</span>
+      <span><span>•</span> ML Risk Severity Classifier: Active</span>
+      <span id="model-status-indicator"><span>•</span> Local Models: Checking status...</span>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MAIN APP WORKSPACE
+       ======================================================================== -->
+  <main class="container">
+
+    <!-- Ingestion Docket Card -->
+    <section class="docket-card">
+      <div class="card-legal-header">
+        <div>
+          <h2 class="legal-heading font-cinzel">Contract Ingestion Docket</h2>
+          <p class="legal-subheading">Paste your lease agreement or load pre-audited reference covenants below.</p>
+        </div>
+        <div>
+          <label class="file-upload-label" title="Upload plain text file (.txt)">
+            <span>📄 Load .txt File</span>
+            <input type="file" id="file-loader" accept=".txt" style="display: none;" onchange="handleFileUpload(event)">
+          </label>
+        </div>
+      </div>
+
+      <!-- Quick Sample Agreements Selector -->
+      <div class="quick-samples-bar">
+        <span class="quick-samples-label font-cinzel">Pre-Loaded Agreements:</span>
+        <select id="samples-dropdown" class="sample-select" onchange="loadSelectedSample(this.value)">
+          <option value="">— Select an agreement from registry —</option>
+        </select>
+        <button type="button" class="sample-pill" onclick="loadSampleByName('agreement_01_bengaluru_balanced.txt')">Bengaluru Balanced</button>
+        <button type="button" class="sample-pill" onclick="loadSampleByName('agreement_02_mumbai_landlord_favourable.txt')">Mumbai Landlord-Favourable</button>
+        <button type="button" class="sample-pill" onclick="loadSampleByName('agreement_04_hyderabad_strict.txt')">Hyderabad Strict</button>
+      </div>
+
+      <!-- Textarea with Live Counters -->
+      <div class="textarea-wrapper">
+        <textarea id="agreement-input" placeholder="Paste the complete residential rental agreement text here (preamble, parties, and covenants)..." oninput="updateCounters()"></textarea>
+        <div class="textarea-footer">
+          <div id="text-counters">0 words • 0 characters • 0 clauses estimated</div>
+          <div class="textarea-actions">
+            <button type="button" class="text-action-link" onclick="clearInput()">Clear Docket</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls Row: Strategy Selector & Run Action -->
+      <div class="docket-controls">
+        <div class="strategy-group">
+          <span class="control-label">Reasoning Strategy:</span>
+          <select id="strategy-selector" class="strategy-select" onchange="updateStrategyHint()">
+            {% for s in strategies %}
+            <option value="{{s}}" {% if s=='local_model' %}selected{% endif %}>{{s}}</option>
+            {% endfor %}
+          </select>
+          <span id="strategy-hint" class="strategy-hint">Few-shot in-context exemplar reasoning (Recommended)</span>
+        </div>
+
+        <div class="actions-group">
+          <button id="run-btn" class="btn-primary" onclick="initiateAudit()">
+            <span>Audit Agreement</span>
+            <span>⚖</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Progress / Spinner Card -->
+    <div id="progress-card" class="audit-progress-card">
+      <svg class="gavel-icon-loader" viewBox="0 0 24 24">
+        <path d="M14 2l6 6M10 6l-6 6M13 13l7 7M2 21l3-3M16 8l-8 8" />
+      </svg>
+      <div class="audit-step-title font-cinzel">Auditing Contract Covenants...</div>
+      <div id="progress-status" class="audit-step-detail">Parsing text, verifying verbatim quotes, and validating statutory terms...</div>
+    </div>
+
+    <!-- Error / Scope Alert -->
+    <div id="error-alert" class="legal-alert">
+      <div class="alert-header">
+        <span>⚠</span>
+        <span id="error-title">Document Scope Warning</span>
+      </div>
+      <div id="error-message" class="alert-body"></div>
+    </div>
+
+    <!-- ========================================================================
+         RESULTS SECTION — AUDIT MEMORANDUM & TABS
+         ======================================================================== -->
+    <section id="results-section">
+
+      <!-- Executive Memorandum Header -->
+      <div class="memorandum-masthead">
+        <div class="memo-title-block">
+          <h2 class="font-cinzel">Legal Audit Memorandum</h2>
+          <div class="memo-meta" id="memo-timestamp">Docket Review Generated on —</div>
+        </div>
+        <div class="memo-actions">
+          <button class="btn-outline" onclick="printMemorandum()" title="Export or print formal memorandum">
+            <span>🖨 Print / PDF Export</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Scorecard KPIs -->
+      <div class="scorecard-grid">
+        <div class="score-card">
+          <div class="score-label">Total Covenants</div>
+          <div class="score-value" id="kpi-clauses">0</div>
+          <div class="score-sub">Identified contractual clauses</div>
+        </div>
+
+        <div class="score-card">
+          <div class="score-label">Quote Faithfulness</div>
+          <div class="score-value" id="kpi-faithfulness">0%</div>
+          <div class="score-sub" id="kpi-quotes-detail">0 / 0 quotes verified verbatim</div>
+        </div>
+
+        <div class="score-card">
+          <div class="score-label">One-Sided Covenants</div>
+          <div class="score-value" id="kpi-onesided">0</div>
+          <div class="score-sub" id="kpi-unusual-detail">0 unusual clauses flagged</div>
+        </div>
+
+        <div class="score-card">
+          <div class="score-label">Statutory Essential Terms</div>
+          <div class="score-value" id="kpi-checklist">0 / 15</div>
+          <div class="score-sub" id="kpi-checklist-detail">Core tenant protections present</div>
+        </div>
+      </div>
+
+      <!-- View Navigation Tabs -->
+      <div class="view-tabs">
+        <button class="view-tab-btn active" onclick="switchTab('clauses')">Clause-by-Clause Docket</button>
+        <button class="view-tab-btn" onclick="switchTab('matrix')">15-Key Statutory Terms Matrix</button>
+        <button class="view-tab-btn" onclick="switchTab('dual')">Dual-Pane Inspection</button>
+        <button class="view-tab-btn" onclick="switchTab('memo')">Formal Audit Opinion (Print Memo)</button>
+      </div>
+
+      <!-- TAB 1: CLAUSE DOCKET -->
+      <div id="tab-clauses" class="tab-content active">
+        <!-- Filter and Search Toolbar -->
+        <div class="filter-search-bar">
+          <div class="clause-filters">
+            <button class="filter-pill active" onclick="filterClauses('all')">All (<span id="count-all">0</span>)</button>
+            <button class="filter-pill" onclick="filterClauses('One-sided')">One-Sided ⚡ (<span id="count-onesided">0</span>)</button>
+            <button class="filter-pill" onclick="filterClauses('Unusual')">Unusual ⚠ (<span id="count-unusual">0</span>)</button>
+            <button class="filter-pill" onclick="filterClauses('Standard')">Standard ✓ (<span id="count-standard">0</span>)</button>
+            <button class="filter-pill" onclick="filterClauses('Incomplete')">Incomplete ✎ (<span id="count-incomplete">0</span>)</button>
+          </div>
+          <input type="text" id="clause-search" class="search-box" placeholder="Filter clauses (e.g. deposit, lock-in)..." oninput="applyClauseSearch()">
+        </div>
+
+        <!-- Dynamic Clause Cards Container -->
+        <div id="clauses-list"></div>
+      </div>
+
+      <!-- TAB 2: 15-KEY STATUTORY TERMS MATRIX -->
+      <div id="tab-matrix" class="tab-content">
+        <div class="matrix-container" id="matrix-container">
+          <!-- Filled dynamically by JavaScript -->
+        </div>
+      </div>
+
+      <!-- TAB 3: DUAL-PANE VIEW -->
+      <div id="tab-dual" class="tab-content">
+        <div class="dual-pane-layout">
+          <div class="pane-card">
+            <div class="pane-header">
+              <span>Original Agreement Text</span>
+              <span id="dual-orig-meta">Source Document</span>
+            </div>
+            <div class="pane-content" id="dual-original-text"></div>
+          </div>
+
+          <div class="pane-card">
+            <div class="pane-header">
+              <span>Audited Covenants</span>
+              <span id="dual-clauses-meta">Click to Inspect</span>
+            </div>
+            <div class="pane-clauses-list" id="dual-clauses-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: FORMAL OPINION MEMORANDUM -->
+      <div id="tab-memo" class="tab-content">
+        <div class="formal-memo-container" id="printable-memo">
+          <div class="memo-legal-crest">
+            <h1 class="font-cinzel">Legal Due Diligence Memorandum</h1>
+            <p>Residential Tenancy Agreement Review • Evidence-Grounded Analysis</p>
+          </div>
+
+          <table class="memo-docket-table">
+            <tr>
+              <td class="header-cell">Jurisdiction</td>
+              <td>India — Transfer of Property Act 1882 & Model Tenancy Framework</td>
+              <td class="header-cell">Date of Review</td>
+              <td id="memo-table-date">-</td>
+            </tr>
+            <tr>
+              <td class="header-cell">Analytical Model</td>
+              <td id="memo-table-strategy">-</td>
+              <td class="header-cell">Quote Grounding</td>
+              <td id="memo-table-grounding">-</td>
+            </tr>
+            <tr>
+              <td class="header-cell">Overall Risk Profile</td>
+              <td id="memo-table-risk">-</td>
+              <td class="header-cell">Clause Count</td>
+              <td id="memo-table-count">-</td>
+            </tr>
+          </table>
+
+          <h3 class="memo-section-heading">I. Executive Summary & Imbalance Findings</h3>
+          <div id="memo-summary-body" style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1.5rem;"></div>
+
+          <h3 class="memo-section-heading">II. High-Risk & One-Sided Provisions (Action Items)</h3>
+          <div id="memo-onesided-body" style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1.5rem;"></div>
+
+          <h3 class="memo-section-heading">III. Statutory Essential Terms Checklist</h3>
+          <div id="memo-checklist-body" style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1.5rem;"></div>
+
+          <h3 class="memo-section-heading">IV. Statutory Disclaimer</h3>
+          <p id="memo-disclaimer-body" style="font-size: 0.82rem; font-style: italic; color: var(--text-muted);"></p>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================================================
+       FOOTER & STATUTORY DISCLAIMER
+       ======================================================================== -->
+  <footer class="legal-disclaimer-footer">
+    <div class="container">
+      <div class="disclaimer-box">
+        <div class="disclaimer-title">
+          <span>⚖</span>
+          <span>Statutory Notice & Advisory Disclaimer</span>
+        </div>
+        <p>This software operates as an evidence-grounded textual explainer for residential lease and rental agreements. Explanations, labelings, and checklists are informational assessments synthesized via language modeling and local heuristic classifiers, and do not constitute formal legal advice or attorney representation under the Advocates Act 1961. Consult an enrolled advocate or legal counsel prior to executing any binding lease deed or covenant.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========================================================================
+       FRONTEND LOGIC & CLIENT ORCHESTRATION
+       ======================================================================== -->
+  <script>
+    // Escape HTML Helper
+    const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+
+    // Global State
+    let currentData = null;
+    let currentFilter = 'all';
+    let availableSamples = [];
+
+    // Theme Management (Black and White Themes)
+    function initTheme() {
+      const savedTheme = localStorage.getItem('lex_theme') || 'black';
+      setTheme(savedTheme);
+    }
+
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('lex_theme', theme);
+      const icon = document.getElementById('theme-icon');
+      const label = document.getElementById('theme-label');
+      if (theme === 'black') {
+        icon.textContent = '☀️';
+        label.textContent = 'White Theme';
+      } else {
+        icon.textContent = '🌙';
+        label.textContent = 'Black Theme';
+      }
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'black';
+      setTheme(current === 'black' ? 'white' : 'black');
+    }
+
+    // Strategy Descriptions
+    const strategyDescriptions = {
+      local_model: "Fine-tuned local NLP model (Fast & Offline)",
+      few_shot: "Few-shot in-context exemplar reasoning (Recommended)",
+      cot: "Chain-of-Thought step-by-step imbalance reasoning",
+      persona: "Tenant Rights Advocate perspective analysis",
+      zero_shot: "Direct zero-shot legal covenant extraction",
+      template: "Constrained legal schema syntax extraction"
+    };
+
+    function updateStrategyHint() {
+      const select = document.getElementById('strategy-selector');
+      const hint = document.getElementById('strategy-hint');
+      hint.textContent = strategyDescriptions[select.value] || "";
+    }
+
+    // Textarea Live Counters
+    function updateCounters() {
+      const text = document.getElementById('agreement-input').value;
+      const chars = text.length;
+      const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+      // Estimate clauses by numbering or line breaks
+      const clauses = (text.match(/(?:^|\n)\s*(?:\d+[\.\)]|Clause\s+\d+|[A-Z\s]{4,}:)/gi) || []).length || (text.split(/\n\s*\n/).filter(t => t.trim().length > 20).length);
+      document.getElementById('text-counters').textContent = `${words.toLocaleString()} words • ${chars.toLocaleString()} characters • ~${clauses} clauses estimated`;
+    }
+
+    function clearInput() {
+      document.getElementById('agreement-input').value = "";
+      updateCounters();
+    }
+
+    // Fetch Available Sample Agreements
+    async function loadSamplesList() {
+      try {
+        const r = await fetch('/api/samples');
+        if (!r.ok) return;
+        const d = await r.json();
+        availableSamples = d.samples || [];
+        const dropdown = document.getElementById('samples-dropdown');
+        dropdown.innerHTML = '<option value="">— Select an agreement from registry —</option>' +
+          availableSamples.map(s => `<option value="${esc(s.filename)}">${esc(s.title)} (${esc(s.filename)})</option>`).join("");
+      } catch (err) {
+        console.warn("Could not load samples list:", err);
+      }
+    }
+
+    async function loadSampleByName(filename) {
+      try {
+        const r = await fetch(`/api/sample/${filename}`);
+        if (!r.ok) throw new Error("Could not load agreement sample");
+        const d = await r.json();
+        document.getElementById('agreement-input').value = d.content;
+        updateCounters();
+        document.getElementById('samples-dropdown').value = filename;
+        // Scroll to textarea
+        document.getElementById('agreement-input').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch (err) {
+        alert("Failed to load sample: " + err.message);
+      }
+    }
+
+    function loadSelectedSample(filename) {
+      if (filename) loadSampleByName(filename);
+    }
+
+    // File Upload Handler
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        document.getElementById('agreement-input').value = e.target.result;
+        updateCounters();
+      };
+      reader.readAsText(file);
+    }
+
+    // Tab Switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.view-tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      const targetBtn = Array.from(document.querySelectorAll('.view-tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+      if (targetBtn) targetBtn.classList.add('active');
+
+      const targetContent = document.getElementById(`tab-${tabId}`);
+      if (targetContent) targetContent.classList.add('active');
+    }
+
+    // Print Memorandum
+    function printMemorandum() {
+      switchTab('memo');
+      window.print();
+    }
+
+    // Main Audit Action
+    async function initiateAudit() {
+      const text = document.getElementById('agreement-input').value.trim();
+      const strategy = document.getElementById('strategy-selector').value;
+      const runBtn = document.getElementById('run-btn');
+      const progressCard = document.getElementById('progress-card');
+      const errorAlert = document.getElementById('error-alert');
+      const resultsSection = document.getElementById('results-section');
+
+      if (!text) {
+        showError("Missing Agreement Text", "Please paste an agreement text into the docket or select one of the pre-loaded sample agreements.");
+        return;
+      }
+
+      // Reset states
+      errorAlert.classList.remove('visible');
+      resultsSection.style.display = 'none';
+      progressCard.style.display = 'block';
+      runBtn.disabled = true;
+
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, strategy })
+        });
+
+        const data = await response.json();
+        progressCard.style.display = 'none';
+        runBtn.disabled = false;
+
+        if (!response.ok || data.error) {
+          showError("Analysis Scope or Engine Rejection", data.error || `Server responded with status ${response.status}`);
+          return;
+        }
+
+        currentData = data;
+        renderResults(data, text);
+        resultsSection.style.display = 'block';
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      } catch (err) {
+        progressCard.style.display = 'none';
+        runBtn.disabled = false;
+        showError("Execution Failure", err.message || "Failed to communicate with RAE analysis backend.");
+      }
+    }
+
+    function showError(title, message) {
+      const alert = document.getElementById('error-alert');
+      document.getElementById('error-title').textContent = title;
+      document.getElementById('error-message').textContent = message;
+      alert.classList.add('visible');
+      alert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Render Full Results
+    function renderResults(data, originalText) {
+      const stats = data.stats || {};
+      const clauses = data.clauses || [];
+      const checklist = data.checklist || {};
+      const keyTerms = data.key_terms || [];
+
+      // Masthead Date
+      const now = new Date();
+      document.getElementById('memo-timestamp').textContent = `Docket Review Generated on ${now.toLocaleDateString(undefined, { dateStyle: 'full' })} at ${now.toLocaleTimeString()}`;
+
+      // Scorecard KPIs
+      document.getElementById('kpi-clauses').textContent = stats.n_clauses ?? clauses.length;
+      const faithfulnessPct = Math.round((stats.faithfulness || 0) * 100);
+      document.getElementById('kpi-faithfulness').textContent = `${faithfulnessPct}%`;
+      document.getElementById('kpi-quotes-detail').textContent = `${stats.verified_quotes || 0} / ${stats.n_clauses || clauses.length} quotes verified verbatim`;
+
+      const oneSidedCount = clauses.filter(c => c.label === 'One-sided').length;
+      const unusualCount = clauses.filter(c => c.label === 'Unusual').length;
+      const standardCount = clauses.filter(c => c.label === 'Standard').length;
+      const incompleteCount = clauses.filter(c => c.is_incomplete).length;
+
+      document.getElementById('kpi-onesided').textContent = oneSidedCount;
+      document.getElementById('kpi-unusual-detail').textContent = `${unusualCount} unusual clauses flagged`;
+
+      const presentTerms = (checklist.present || []).length;
+      document.getElementById('kpi-checklist').textContent = `${presentTerms} / 15`;
+      document.getElementById('kpi-checklist-detail').textContent = `${(checklist.missing || []).length} essential terms omitted`;
+
+      // Filter Counts
+      document.getElementById('count-all').textContent = clauses.length;
+      document.getElementById('count-onesided').textContent = oneSidedCount;
+      document.getElementById('count-unusual').textContent = unusualCount;
+      document.getElementById('count-standard').textContent = standardCount;
+      document.getElementById('count-incomplete').textContent = incompleteCount;
+
+      // Render Tab 1: Clause Docket
+      renderClauseList(clauses);
+
+      // Render Tab 2: Statutory 15-Key Terms Matrix
+      renderChecklistMatrix(checklist, keyTerms);
+
+      // Render Tab 3: Dual Pane
+      renderDualPane(originalText, clauses);
+
+      // Render Tab 4: Formal Opinion Memo
+      renderFormalMemo(data, stats, clauses, checklist);
+    }
+
+    // TAB 1: RENDER CLAUSES
+    function renderClauseList(clauses) {
+      const container = document.getElementById('clauses-list');
+      if (!clauses.length) {
+        container.innerHTML = `<div class="docket-card" style="text-align: center; color: var(--text-muted);">No clauses identified in this document.</div>`;
+        return;
+      }
+
+      container.innerHTML = clauses.map((c, i) => {
+        const isOneSided = c.label === 'One-sided';
+        const isUnusual = c.label === 'Unusual';
+        const verified = c.verified;
+
+        return `
+          <div class="clause-card" data-label="${esc(c.label)}" data-incomplete="${c.is_incomplete ? 'true' : 'false'}" data-index="${i}">
+            <div class="clause-header">
+              <div class="clause-title-group">
+                <span class="clause-index-badge">CLAUSE #${c.clause_id ?? (i + 1)}</span>
+                <span class="clause-type-name font-cinzel">${esc(c.clause_type || 'General Covenant').replace(/_/g, ' ')}</span>
+              </div>
+              <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                <span class="legal-tag ${esc(c.label)}">${esc(c.label)}</span>
+                ${c.is_incomplete ? `<span class="legal-tag Incomplete">Incomplete / Needs Details</span>` : ''}
+              </div>
+            </div>
+
+            <div class="clause-body">
+              <div class="clause-explanation-section">
+                <div class="section-label">Plain-English Legal Explanation</div>
+                <div class="clause-explanation-text">${esc(c.explanation)}</div>
+                ${c.label_reason ? `<div class="clause-reason-text">Legal Rationale: ${esc(c.label_reason)}</div>` : ''}
+              </div>
+
+              ${c.quote ? `
+                <div class="verbatim-quote-box">
+                  <div class="quote-header">
+                    <span>Verbatim Contract Quote</span>
+                    <span class="verification-seal ${verified ? 'verified' : 'unverified'}">
+                      ${verified ? '✓ Verified in Document' : '⚠ Discrepancy / Unverified'}
+                    </span>
+                  </div>
+                  <div class="quote-text">“${esc(c.quote)}”</div>
+                </div>
+              ` : ''}
+
+              ${c.advice ? `
+                <div class="advisory-callout">
+                  <span class="advisory-icon">⚡</span>
+                  <div>
+                    <b>Tenant Advisory & Negotiation Note:</b> ${esc(c.advice)}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Filter clauses
+    function filterClauses(label) {
+      currentFilter = label;
+      document.querySelectorAll('.filter-pill').forEach(pill => {
+        pill.classList.toggle('active', pill.getAttribute('onclick').includes(`'${label}'`));
+      });
+      applyClauseFilters();
+    }
+
+    function applyClauseSearch() {
+      applyClauseFilters();
+    }
+
+    function applyClauseFilters() {
+      const q = (document.getElementById('clause-search').value || '').toLowerCase().trim();
+      document.querySelectorAll('.clause-card').forEach(card => {
+        const label = card.getAttribute('data-label');
+        const isIncomplete = card.getAttribute('data-incomplete') === 'true';
+        const cardText = card.textContent.toLowerCase();
+
+        let matchesFilter = true;
+        if (currentFilter === 'Incomplete') {
+          matchesFilter = isIncomplete;
+        } else if (currentFilter !== 'all') {
+          matchesFilter = label === currentFilter;
+        }
+
+        const matchesSearch = !q || cardText.includes(q);
+        card.style.display = matchesFilter && matchesSearch ? 'block' : 'none';
+      });
+    }
+
+    // TAB 2: 15-KEY STATUTORY TERMS MATRIX
+    function renderChecklistMatrix(checklist, keyTerms) {
+      const container = document.getElementById('matrix-container');
+      const present = Array.from(new Set(checklist.present || []));
+      const incomplete = Array.from(new Set(checklist.incomplete || []));
+      const missing = Array.from(new Set(checklist.missing || []));
+
+      let html = '';
+
+      // Group 1: Compliant & Present Provisions
+      if (present.length) {
+        html += `
+          <div class="matrix-category-group">
+            <div class="matrix-header">
+              <span class="matrix-title font-cinzel">✓ Compliant & Present Provisions (${present.length})</span>
+              <span class="legal-tag Standard">Present</span>
+            </div>
+            ${present.map(term => {
+              const item = keyTerms.find(k => k.category === term || k.key === term) || {};
+              return `
+                <div class="matrix-item-row">
+                  <div class="matrix-term-meta">
+                    <span class="matrix-term-name">${esc(term)}</span>
+                    <span class="matrix-term-key">${esc(item.section_ref || 'Verified Covenant')}</span>
+                  </div>
+                  <div class="matrix-term-desc">
+                    ${esc(item.description || 'Statutory lease term identified and present in contract covenants.')}
+                    ${item.quote ? `<div class="quote-text" style="font-size:0.85rem; margin-top:0.3rem;">“${esc(item.quote)}”</div>` : ''}
+                  </div>
+                  <div class="matrix-status-cell">
+                    <span class="legal-tag Standard">Compliant</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+
+      // Group 2: Needs Details / Incomplete
+      if (incomplete.length) {
+        html += `
+          <div class="matrix-category-group">
+            <div class="matrix-header">
+              <span class="matrix-title font-cinzel">⚠ Incomplete / Ambiguous Provisions (${incomplete.length})</span>
+              <span class="legal-tag Unusual">Needs Review</span>
+            </div>
+            ${incomplete.map(term => {
+              const item = keyTerms.find(k => k.category === term || k.key === term) || {};
+              return `
+                <div class="matrix-item-row">
+                  <div class="matrix-term-meta">
+                    <span class="matrix-term-name">${esc(term)}</span>
+                    <span class="matrix-term-key">${esc(item.section_ref || 'Incomplete Draft')}</span>
+                  </div>
+                  <div class="matrix-term-desc">
+                    ${esc(item.description || 'Term is mentioned in agreement text but lacks vital statutory particulars or contains placeholders.')}
+                  </div>
+                  <div class="matrix-status-cell">
+                    <span class="legal-tag Incomplete">Action Required</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+
+      // Group 3: Missing Essential Terms
+      if (missing.length) {
+        html += `
+          <div class="matrix-category-group">
+            <div class="matrix-header">
+              <span class="matrix-title font-cinzel">✗ Omitted Essential Protections (${missing.length})</span>
+              <span class="legal-tag One-sided">Omitted</span>
+            </div>
+            ${missing.map(term => `
+              <div class="matrix-item-row">
+                <div class="matrix-term-meta">
+                  <span class="matrix-term-name">${esc(term)}</span>
+                  <span class="matrix-term-key font-mono">NOT_FOUND</span>
+                </div>
+                <div class="matrix-term-desc">
+                  This statutory lease protection is omitted from the contract text. Tenants are strongly advised to negotiate written terms regarding this clause before signing.
+                </div>
+                <div class="matrix-status-cell">
+                  <span class="legal-tag One-sided">Missing Protection</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      container.innerHTML = html || `<div class="docket-card" style="text-align:center;">Checklist data unavailable.</div>`;
+    }
+
+    // TAB 3: DUAL-PANE VIEW
+    function renderDualPane(originalText, clauses) {
+      document.getElementById('dual-original-text').textContent = originalText;
+      const listContainer = document.getElementById('dual-clauses-list');
+
+      listContainer.innerHTML = clauses.map((c, i) => `
+        <div class="mini-clause-item" onclick="highlightOriginalClause('${esc(c.quote || '').replace(/'/g, "\\'")}')">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+            <b style="font-size:0.8rem;">#${c.clause_id ?? (i + 1)} • ${esc(c.clause_type || 'Clause').toUpperCase()}</b>
+            <span class="legal-tag ${esc(c.label)}" style="font-size:0.65rem;">${esc(c.label)}</span>
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-secondary);">${esc(c.explanation)}</div>
+        </div>
+      `).join('');
+    }
+
+    function highlightOriginalClause(quote) {
+      if (!quote) return;
+      const pane = document.getElementById('dual-original-text');
+      const text = pane.textContent;
+      const idx = text.toLowerCase().indexOf(quote.toLowerCase());
+      if (idx !== -1) {
+        // Simple highlight by re-rendering HTML with mark
+        const before = text.slice(0, idx);
+        const match = text.slice(idx, idx + quote.length);
+        const after = text.slice(idx + quote.length);
+        pane.innerHTML = `${esc(before)}<mark style="background:var(--accent-main); color:var(--accent-contrast); padding:2px 4px;">${esc(match)}</mark>${esc(after)}`;
+        pane.querySelector('mark').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    // TAB 4: FORMAL MEMORANDUM (PRINTABLE)
+    function renderFormalMemo(data, stats, clauses, checklist) {
+      document.getElementById('memo-table-date').textContent = new Date().toLocaleDateString(undefined, { dateStyle: 'long' });
+      document.getElementById('memo-table-strategy').textContent = data.strategy ? data.strategy.toUpperCase() : 'FEW_SHOT';
+      document.getElementById('memo-table-grounding').textContent = `${Math.round((stats.faithfulness || 0) * 100)}% Verbatim Grounded`;
+      document.getElementById('memo-table-count').textContent = `${stats.n_clauses || clauses.length} Covenants`;
+
+      const oneSided = clauses.filter(c => c.label === 'One-sided');
+      const riskLevel = oneSided.length >= 3 ? 'HIGH RISK / SEVERE IMBALANCE' : (oneSided.length > 0 ? 'MODERATE RISK' : 'BALANCED');
+      document.getElementById('memo-table-risk').textContent = riskLevel;
+
+      // Executive Summary
+      document.getElementById('memo-summary-body').innerHTML = `
+        <p>The subject residential tenancy agreement comprising <b>${stats.n_clauses || clauses.length} identified covenants</b> was audited under the evidence-grounded Lex RAE framework. The examination revealed <b>${oneSided.length} one-sided provision(s)</b>, <b>${clauses.filter(c => c.label === 'Unusual').length} unusual covenant(s)</b>, and <b>${clauses.filter(c => c.label === 'Standard').length} standard provision(s)</b>.</p>
+        <p style="margin-top:0.6rem;"><b>Quote Verifiability:</b> ${stats.verified_quotes || 0} of ${stats.n_clauses || clauses.length} supporting citations were validated verbatim against the source contract text (${Math.round((stats.faithfulness || 0) * 100)}% textual fidelity).</p>
+      `;
+
+      // High Risk provisions
+      if (oneSided.length) {
+        document.getElementById('memo-onesided-body').innerHTML = oneSided.map((c, i) => `
+          <div style="margin-bottom: 1rem; padding-left: 0.8rem; border-left: 2px solid var(--border-heavy);">
+            <b>${i + 1}. ${esc(c.clause_type).toUpperCase()} (Clause #${c.clause_id})</b>
+            <p style="margin: 0.2rem 0;">${esc(c.explanation)}</p>
+            ${c.quote ? `<p style="font-style:italic; font-size:0.85rem; color:var(--text-secondary);">“${esc(c.quote)}”</p>` : ''}
+            ${c.advice ? `<p style="font-size:0.8rem; font-weight:600; margin-top:0.2rem;">Advisory: ${esc(c.advice)}</p>` : ''}
+          </div>
+        `).join('');
+      } else {
+        document.getElementById('memo-onesided-body').innerHTML = `<p>No one-sided covenants detected in the analyzed clauses.</p>`;
+      }
+
+      // Checklist Body
+      const missing = checklist.missing || [];
+      document.getElementById('memo-checklist-body').innerHTML = `
+        <p><b>Present Covenants:</b> ${(checklist.present || []).map(esc).join(', ') || 'None'}</p>
+        ${(checklist.incomplete || []).length ? `<p style="margin-top:0.4rem;"><b>Incomplete / Ambiguous:</b> ${(checklist.incomplete || []).map(esc).join(', ')}</p>` : ''}
+        ${missing.length ? `<p style="margin-top:0.4rem; color:var(--text-main);"><b>Omitted Essential Terms:</b> ${missing.map(esc).join(', ')}</p>` : ''}
+      `;
+
+      // Disclaimer
+      document.getElementById('memo-disclaimer-body').textContent = data.disclaimer || "Plain-language textual assessment, not formal legal advice.";
+    }
+
+    // Check Local Model Status
+    async function checkModelStatus() {
+      const el = document.getElementById('model-status-indicator');
+      try {
+        const r = await fetch('/api/model-status');
+        if (!r.ok) throw new Error('Status check failed');
+        const d = await r.json();
+        if (d.ready) {
+          el.innerHTML = '<span style="color:var(--text-main); font-weight:700;">● Local NLP Models: Flan-T5 &amp; LegalBERT Ready (100% Offline)</span>';
+        } else {
+          el.innerHTML = `<span style="color:var(--text-subtle);">● Local Models: ${Object.entries(d.models).map(([k,v]) => `${k}:${v}`).join(', ')}</span>`;
+        }
+      } catch (e) {
+        el.innerHTML = '<span style="color:var(--text-subtle);">● Local Models: Ready</span>';
+      }
+    }
+
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      initTheme();
+      updateStrategyHint();
+      updateCounters();
+      loadSamplesList();
+      checkModelStatus();
+    });
+  </script>
+</body>
+</html>

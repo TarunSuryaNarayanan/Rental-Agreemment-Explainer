@@ -17,12 +17,12 @@ CLAUSE_TYPES = [
     "dispute_resolution", "other",
 ]
 
-LOCAL_MODEL = str(pathlib.Path(__file__).parent.parent.parent / "models" / "legalbert_classifier")
+LOCAL_MODEL = str(pathlib.Path(__file__).resolve().parent.parent.parent / "models" / "legalbert_classifier")
 DEFAULT_MODEL = os.getenv(
     "RAE_CLASSIFIER_MODEL",
     LOCAL_MODEL if pathlib.Path(LOCAL_MODEL).exists() else "nlpaueb/legal-bert-base-uncased",
 )
-CONFIDENCE_THRESHOLD = float(os.getenv("RAE_CONFIDENCE_THRESHOLD", "0.45"))
+CONFIDENCE_THRESHOLD = float(os.getenv("RAE_CONFIDENCE_THRESHOLD", "0.15"))
 
 
 @lru_cache(maxsize=1)
@@ -33,12 +33,15 @@ def get_classifier():
         # If running in mock mode, do not attempt network download
         if os.getenv("RAE_MOCK", "0") == "1":
             return None
-        is_local = pathlib.Path(DEFAULT_MODEL).exists()
+        is_local = pathlib.Path(DEFAULT_MODEL).exists() or os.getenv("TRANSFORMERS_OFFLINE") == "1"
         tokenizer = AutoTokenizer.from_pretrained(DEFAULT_MODEL, local_files_only=is_local)
         model = AutoModelForSequenceClassification.from_pretrained(DEFAULT_MODEL, local_files_only=is_local)
         return pipeline("text-classification", model=model, tokenizer=tokenizer, device=-1)
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Could not load classifier model (%s): %s", DEFAULT_MODEL, e)
         return None
+
 
 
 def classify_clause(text: str, fallback_fn: Optional[Callable[[str], str]] = None) -> Tuple[str, float]:

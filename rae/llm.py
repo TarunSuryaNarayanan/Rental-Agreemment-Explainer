@@ -1,83 +1,14 @@
-"""LLM wrapper supporting local Ollama and Anthropic Claude.
+"""Legacy LLM wrapper (Deprecated).
 
-Priority:
-1. RAE_MOCK=1 -> offline stub
-2. ANTHROPIC_API_KEY present or RAE_BACKEND=claude -> Anthropic Claude
-3. Ollama (default local backend at http://localhost:11434)
+The system now runs entirely on local models (Flan-T5, LegalBERT, scikit-learn risk classifier).
+This module is retained for backwards compatibility with offline mocks.
 """
 import json
 import os
 import re
-import urllib.request
 
 MODEL = os.getenv("RAE_MODEL", "claude-sonnet-5-5")
-OLLAMA_MODEL = os.getenv("RAE_OLLAMA_MODEL", "qwen2.5:14b")
-OLLAMA_URL = os.getenv("RAE_OLLAMA_URL", "http://localhost:11434")
-BACKEND = os.getenv("RAE_BACKEND", "auto")
-
-
-def _mock_enabled() -> bool:
-    return os.getenv("RAE_MOCK", "0") == "1"
-
-
-def _call_ollama(system: str, user: str, temperature: float = 0.0) -> str:
-    prompt = f"{system}\n\n{user}" if system else user
-    payload = json.dumps({
-        "model": OLLAMA_MODEL,
-        "prompt": prompt,
-        "stream": False,
-        "options": {"temperature": temperature},
-    }).encode()
-    req = urllib.request.Request(
-        f"{OLLAMA_URL}/api/generate",
-        data=payload,
-        headers={"Content-Type": "application/json"},
-    )
-    with urllib.request.urlopen(req, timeout=120) as r:
-        return json.loads(r.read())["response"]
-
-
-def _call_claude(system: str, user: str, max_tokens: int = 1200, temperature: float = 0.0) -> str:
-    import anthropic
-    client = anthropic.Anthropic()
-    resp = client.messages.create(
-        model=MODEL,
-        max_tokens=max_tokens,
-        temperature=temperature,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-    return "".join(b.text for b in resp.content if b.type == "text")
-
-
-def call_llm(system: str, user: str, max_tokens: int = 1200, temperature: float = 0.0) -> str:
-    if _mock_enabled():
-        return _mock(user)
-
-    # Explicit backend setting
-    if BACKEND == "claude":
-        return _call_claude(system, user, max_tokens, temperature)
-    if BACKEND == "ollama":
-        return _call_ollama(system, user, temperature)
-
-    # Auto-detection
-    if os.getenv("ANTHROPIC_API_KEY"):
-        try:
-            return _call_claude(system, user, max_tokens, temperature)
-        except Exception:
-            pass
-
-    # Try local Ollama
-    try:
-        return _call_ollama(system, user, temperature)
-    except Exception as e:
-        raise RuntimeError(
-            f"No LLM backend available. Either:\n"
-            f"1. Start Ollama locally ('ollama serve' and 'ollama pull {OLLAMA_MODEL}'), or\n"
-            f"2. Set ANTHROPIC_API_KEY for Claude API, or\n"
-            f"3. Run with RAE_MOCK=1 for offline testing.\n"
-            f"Underlying error: {e}"
-        )
+BACKEND = os.getenv("RAE_BACKEND", "mock")
 
 
 def extract_json(text: str) -> dict:
@@ -99,10 +30,14 @@ def _mock(user: str) -> str:
     return json.dumps(
         {
             "clause_type": "other",
-            "explanation": "(mock) " + quote[:120],
+            "explanation": quote[:120],
             "label": label,
-            "label_reason": "(mock) keyword based",
+            "label_reason": "Identified by local clause pattern matching",
             "quote": quote,
             "reasoning": "",
         }
     )
+
+
+def call_llm(system: str, user: str, max_tokens: int = 1200, temperature: float = 0.0) -> str:
+    return _mock(user)

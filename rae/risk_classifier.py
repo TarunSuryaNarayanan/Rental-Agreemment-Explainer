@@ -17,18 +17,19 @@ import pickle
 # ----------------------------------------------------------------------
 # Directory that holds the pickled pipeline – can be overridden via env var.
 # ----------------------------------------------------------------------
-MODEL_DIR = os.getenv("RISK_MODEL_DIR", "./models/risk-clf-sklearn")
+DEFAULT_MODEL_DIR = str(pathlib.Path(__file__).resolve().parent.parent / "models" / "risk-clf-sklearn")
+MODEL_DIR = os.getenv("RISK_MODEL_DIR", DEFAULT_MODEL_DIR)
 PIPELINE_PATH = pathlib.Path(MODEL_DIR) / "pipeline.pkl"
 
-if not PIPELINE_PATH.is_file():
-    raise FileNotFoundError(
-        f"Risk model not found at {PIPELINE_PATH}. "
-        "Run `python -m rae.train_risk_classifier_sklearn` to create it."
-    )
+_pipeline = None
 
-# Load once at import time – cheap for the tiny model.
-with open(PIPELINE_PATH, "rb") as f:
-    _pipeline = pickle.load(f)  # type: ignore[var‑annotated]
+if PIPELINE_PATH.is_file():
+    with open(PIPELINE_PATH, "rb") as f:
+        _pipeline = pickle.load(f)
+else:
+    import logging
+    logging.getLogger(__name__).warning("Risk model not found at %s. Defaulting to heuristic fallback.", PIPELINE_PATH)
+
 
 def predict_risk(clause: str) -> str:
     """
