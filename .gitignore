@@ -3,6 +3,9 @@ __pycache__/
 rae/__pycache__/
 rae/nlp/__pycache__/
 
+# Virtual environment
+.venv/
+
 # Data / benchmark resources (not needed for the core analyzer)
 agreements/
 benchmark/
@@ -13,3 +16,6 @@ train_model.py
 models/**/checkpoint-*/
 models/**/training_args.bin
 models/**/generation_config.json
+
+# Loose files
+demo_agreement.txt

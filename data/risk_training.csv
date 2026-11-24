@@ -1,0 +1,28 @@
+clause_text,risk_label
+"the landlord may increase rent by 20% at any time without notice",Critical
+"tenant shall be responsible for all structural repairs irrespective of cause",High
+"landlord may terminate the agreement without prior notice",Critical
+"security deposit may be deducted at landlord's sole discretion without receipts",High
+"notice period for tenant is 90 days but landlord can terminate with 15 days",High
+"the landlord may disconnect utilities if payment is delayed",High
+"all disputes shall be decided solely by the landlord",Critical
+"the landlord may verbally modify any provision",High
+"the landlord shall provide possession of the property on 1 December 2026",Standard
+"monthly rent shall be Rs. 25000 per month",Standard
+"monthly rent of rupees 32000 payable on or before 5th of every month",Standard
+"security deposit of Rs. 150000 refundable at the end of tenancy",Standard
+"lock-in period of 12 months from commencement date",Standard
+"tenant shall give 90 days written notice before vacating",Standard
+"subletting or assigning the premises is not permitted without prior written consent",Standard
+"tenant shall pay electricity water and other utility bills",Standard
+"stamp duty and registration charges shall be borne equally by both parties",Standard
+"landlord may enter premises after giving 24 hours prior notice",Standard
+"agreement is governed by the laws of India and courts of Bengaluru shall have jurisdiction",Standard
+"tenant shall bear costs of minor repairs up to Rs. 500",Standard
+"penalty of Rs. 5000 per day for every day of delay in payment",Critical
+"landlord may enter the premises at any time without informing the tenant",High
+"tenant responsible for all repairs including structural damage irrespective of cause",High
+"landlord may deduct any amount from security deposit without providing receipts",High
+"landlord may terminate tenancy at any time without notice or reason",Critical
+"all disputes to be decided solely and exclusively by the landlord",Critical
+"landlord reserves right to increase rent by any amount at any time without consent",Critical
