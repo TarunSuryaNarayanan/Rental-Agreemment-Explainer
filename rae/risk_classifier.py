@@ -24,8 +24,13 @@ PIPELINE_PATH = pathlib.Path(MODEL_DIR) / "pipeline.pkl"
 _pipeline = None
 
 if PIPELINE_PATH.is_file():
-    with open(PIPELINE_PATH, "rb") as f:
-        _pipeline = pickle.load(f)
+    try:
+        with open(PIPELINE_PATH, "rb") as f:
+            _pipeline = pickle.load(f)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Could not load risk model (%s). Defaulting to Standard fallback.", e)
+        _pipeline = None
 else:
     import logging
     logging.getLogger(__name__).warning("Risk model not found at %s. Defaulting to heuristic fallback.", PIPELINE_PATH)

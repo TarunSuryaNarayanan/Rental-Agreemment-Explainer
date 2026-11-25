@@ -1,13 +1,23 @@
-"""End-to-end: split -> explain per clause (local models) -> verify quotes -> guardrails -> key terms."""
+"""End-to-end: split -> explain per clause (local models or LLM strategy) -> verify quotes -> guardrails -> key terms."""
+from concurrent.futures import ThreadPoolExecutor
 import re
 from . import guardrails
 from .checklist import CANONICAL_KEY_TERMS, check_missing
-from .prompts import CLAUSE_TYPES, LABELS
+from .llm import call_llm, extract_json
+from .prompts import CLAUSE_TYPES, LABELS, build_prompt, build_retry_prompt
 from .risk_classifier import predict_risk
 from .splitter import split_clauses
 from .verifier import verify_result
 
 KEY_TERM_TYPES = list(CANONICAL_KEY_TERMS.keys())
+
+
+def _extract_verbatim_quote(text: str) -> str:
+    """Pick the first verbatim phrase with at least 4 words so quote verification succeeds."""
+    parts = [p.strip() for p in re.split(r"[;\.\n]", text) if len(p.strip().split()) >= 4]
+    if parts:
+        return parts[0]
+    return text[:120].strip()
 
 
 def _sanitize(r: dict, guessed_type: str) -> dict:
@@ -37,9 +47,8 @@ def explain_clause(clause, doc: str, explanation: str = None, strategy: str = "l
         from rae.nlp.explainer import explain_clause_local
         explanation = explain_clause_local(clause.text)
 
-    # Extract first meaningful verbatim phrase as quote
-    parts = [p.strip() for p in re.split(r"[;\.]", clause.text) if len(p.strip()) > 15]
-    quote = parts[0] if parts else clause.text[:60].strip()
+    # Extract first meaningful verbatim phrase as quote (>= 4 words)
+    quote = _extract_verbatim_quote(clause.text)
 
     low = clause.text.lower()
     try:
@@ -79,6 +88,36 @@ def explain_clause(clause, doc: str, explanation: str = None, strategy: str = "l
 explain_clause_with_local_models = explain_clause
 
 
+def _explain_clause_llm(clause, doc: str, strategy: str, variant: int = 0, max_retries: int = 1) -> dict:
+    """Analyze a clause via the configured LLM strategy, falling back to local models if unavailable."""
+    base = build_prompt(clause.text, strategy, variant)
+    prompt, result = base, {}
+    failed = False
+    for _ in range(max_retries + 1):
+        try:
+            result = extract_json(call_llm(prompt.system, prompt.user))
+            failed = False
+        except Exception as e:
+            failed = True
+            result = {"error": str(e), "quote": ""}
+        result = verify_result(result, clause.text, doc)
+        if result["verified"]:
+            break
+        prompt = build_retry_prompt(base, result.get("quote", ""))
+
+    if failed:
+        return explain_clause(clause, doc, strategy="local_model", variant=variant)
+
+    result = _sanitize(result, clause.guessed_type)
+    result.update(
+        clause_id=clause.id,
+        clause_text=clause.text,
+        needs_review=not result["verified"],
+        advice=guardrails.DISCLAIMER if guardrails.advice_needed(result) else "",
+    )
+    return result
+
+
 def analyze(doc: str, strategy: str = "local_model", variant: int = 0, workers: int = 4) -> dict:
     if not guardrails.is_rental_agreement(doc):
         return {"error": "This tool only handles residential rental/lease agreements. "
@@ -94,13 +133,16 @@ def analyze(doc: str, strategy: str = "local_model", variant: int = 0, workers: 
             "disclaimer": guardrails.DISCLAIMER,
         }
 
-    from rae.nlp.explainer import explain_clauses_batch
-    explanations = explain_clauses_batch([c.text for c in clauses])
-
-    results = [
-        explain_clause(c, doc, explanation=exp, strategy=strategy, variant=variant)
-        for c, exp in zip(clauses, explanations)
-    ]
+    if strategy == "local_model":
+        from rae.nlp.explainer import explain_clauses_batch
+        explanations = explain_clauses_batch([c.text for c in clauses])
+        results = [
+            explain_clause(c, doc, explanation=exp, strategy=strategy, variant=variant)
+            for c, exp in zip(clauses, explanations)
+        ]
+    else:
+        with ThreadPoolExecutor(workers) as ex:
+            results = list(ex.map(lambda c: _explain_clause_llm(c, doc, strategy, variant), clauses))
 
     checklist_status = check_missing(doc, clauses=results)
     # Use canonical key terms mapped from checklist
