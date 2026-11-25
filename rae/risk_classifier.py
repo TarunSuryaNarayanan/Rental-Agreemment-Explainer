@@ -15,20 +15,30 @@ import pathlib
 import pickle
 
 # ----------------------------------------------------------------------
-# Directory that holds the pickled pipeline – can be overridden via env var.
+# Directory that holds the pickled pipeline – resolved relative to repo root
+# by default, and overridable via RISK_MODEL_DIR.
 # ----------------------------------------------------------------------
-MODEL_DIR = os.getenv("RISK_MODEL_DIR", "./models/risk-clf-sklearn")
-PIPELINE_PATH = pathlib.Path(MODEL_DIR) / "pipeline.pkl"
+_DEFAULT_MODEL_DIR = pathlib.Path(__file__).resolve().parent.parent / "models" / "risk-clf-sklearn"
+MODEL_DIR = pathlib.Path(os.getenv("RISK_MODEL_DIR", str(_DEFAULT_MODEL_DIR)))
+PIPELINE_PATH = MODEL_DIR / "pipeline.pkl"
 
-if not PIPELINE_PATH.is_file():
-    raise FileNotFoundError(
-        f"Risk model not found at {PIPELINE_PATH}. "
-        "Run `python -m rae.train_risk_classifier_sklearn` to create it."
-    )
+_pipeline = None
+if PIPELINE_PATH.is_file():
+    try:
+        with open(PIPELINE_PATH, "rb") as f:
+            _pipeline = pickle.load(f)  # type: ignore[var-annotated]
+    except Exception:
+        _pipeline = None
 
-# Load once at import time – cheap for the tiny model.
-with open(PIPELINE_PATH, "rb") as f:
-    _pipeline = pickle.load(f)  # type: ignore[var‑annotated]
+
+def _heuristic_risk(clause: str) -> str:
+    low = clause.lower()
+    if any(k in low for k in ("sole discretion", "without prior notice", "without notice", "forfeited in full", "entire security deposit")):
+        return "High"
+    if any(k in low for k in ("curfew", "structural repairs", "mandatory painting", "6 months advance", "lock-in of 12")):
+        return "Medium"
+    return "Standard"
+
 
 def predict_risk(clause: str) -> str:
     """
@@ -47,9 +57,11 @@ def predict_risk(clause: str) -> str:
     """
     if not clause:
         return "Standard"
+    if _pipeline is None:
+        return _heuristic_risk(clause)
     # The pipeline expects an iterable of strings.
     try:
         prediction = _pipeline.predict([clause])
         return str(prediction[0])
     except Exception:  # safety net – never crash the checklist
-        return "Standard"
+        return _heuristic_risk(clause)

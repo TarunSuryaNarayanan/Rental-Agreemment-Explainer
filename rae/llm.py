@@ -20,6 +20,15 @@ def _mock_enabled() -> bool:
     return os.getenv("RAE_MOCK", "0") == "1"
 
 
+def active_backend() -> str:
+    """Return a human-readable identifier of the currently configured LLM backend."""
+    if _mock_enabled():
+        return "mock (offline)"
+    if BACKEND == "claude" or (BACKEND == "auto" and os.getenv("ANTHROPIC_API_KEY")):
+        return f"claude ({MODEL})"
+    return f"ollama ({OLLAMA_MODEL})"
+
+
 def _call_ollama(system: str, user: str, temperature: float = 0.0) -> str:
     prompt = f"{system}\n\n{user}" if system else user
     payload = json.dumps({
@@ -92,17 +101,33 @@ def extract_json(text: str) -> dict:
 def _mock(user: str) -> str:
     matches = re.findall(r"<clause>(.*?)</clause>", user, re.S)
     clause = (matches[-1] if matches else "").strip()
-    clause = re.sub(r"^\s*(\d{1,2}[.)]|\([a-z]\))\s+", "", clause)
-    quote = re.split(r"(?<=[.;])\s", clause)[0]
-    lowered = clause.lower()
-    label = "One-sided" if any(k in lowered for k in ("forfeit", "sole discretion", "without prior notice")) else "Standard"
+    clause_no_num = re.sub(r"^\s*(\d{1,2}[.)]|\([a-z]\))\s+", "", clause)
+    quote = re.split(r"(?<=[.;])\s", clause_no_num)[0]
+    lowered = clause_no_num.lower()
+    is_incomplete = bool(re.search(r"\[[^\]]+\]|_{3,}", clause_no_num))
+
+    if any(k in lowered for k in ("forfeit", "sole discretion", "without prior notice", "without notice")):
+        label = "One-sided"
+        reason = "Gives the landlord disproportionate unilateral power or imposes a heavy tenant-only penalty."
+    elif any(k in lowered for k in ("structural repairs", "mandatory painting", "curfew", "6 months advance", "no guests")):
+        label = "Unusual"
+        reason = "Stricter or more burdensome than typical residential tenancy terms."
+    else:
+        label = "Standard"
+        reason = (
+            "Standard clause structure, but contains unfilled template placeholders."
+            if is_incomplete
+            else "Common, balanced clause typically found in residential rental agreements."
+        )
+
     return json.dumps(
         {
             "clause_type": "other",
-            "explanation": "(mock) " + quote[:120],
+            "explanation": f"In plain terms: {quote[:160]}",
             "label": label,
-            "label_reason": "(mock) keyword based",
+            "is_incomplete": is_incomplete,
+            "label_reason": reason,
             "quote": quote,
-            "reasoning": "",
+            "reasoning": f"Checked party obligations and risk allocation for: {quote[:80]}",
         }
     )

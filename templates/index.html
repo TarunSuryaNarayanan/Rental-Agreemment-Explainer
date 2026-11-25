@@ -1,71 +1,253 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rental Agreement Explainer</title>
-<style>
- body{font-family:system-ui,sans-serif;max-width:960px;margin:2rem auto;padding:0 1rem;color:#222}
- textarea{width:100%;height:220px;padding:.6rem;font-family:inherit}
- .row{display:flex;gap:.6rem;align-items:center;margin:.6rem 0}
- button{padding:.5rem 1.1rem;border:0;border-radius:6px;background:#2d5be3;color:#fff;cursor:pointer}
- .card{border:1px solid #ddd;border-radius:8px;padding:.8rem 1rem;margin:.7rem 0}
- .tag{display:inline-block;padding:.1rem .5rem;border-radius:99px;font-size:.8rem;color:#fff}
- .Standard, .Present{background:#2e8b57}.Unusual{background:#d98e04}.One-sided, .Missing{background:#c62828}.Incomplete{background:#4a6fa5}.Error{background:#d9534f}
- blockquote{margin:.4rem 0;padding-left:.7rem;border-left:3px solid #aaa;color:#555;font-size:.9rem}
- .warn{color:#c62828;font-size:.85rem}.muted{color:#777;font-size:.85rem}
- .panel{background:#f6f8ff}
-</style></head><body>
-<h1>Rental Agreement Explainer</h1>
-<p class="muted">Paste your rental agreement. Every explanation is backed by a quote that is automatically checked against your text.</p>
-<textarea id="text" placeholder="Paste agreement text here..."></textarea>
-<div class="row">
- <label>Strategy
-  <select id="strategy">{% for s in strategies %}<option {% if s=='few_shot' %}selected{% endif %}>{{s}}</option>{% endfor %}</select>
- </label>
- <button onclick="run()">Explain</button><span id="status" class="muted"></span>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rental Agreement Explainer</title>
+  <style>
+    :root {
+      --bg: #f4f6fb; --surface: #ffffff; --border: #dde3ee; --text: #1c2434; --muted: #5c687d;
+      --primary: #2557d6; --primary-hover: #1b44ad; --ok: #1f8a5b; --warn: #d4820a; --danger: #c62828; --info: #4a6fa5;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 1.5rem 1rem 3rem; }
+    .container { max-width: 1020px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
+    h1 { margin: 0; font-size: 1.65rem; }
+    .badge { display: inline-block; padding: .25rem .65rem; border-radius: 99px; font-size: .78rem; font-weight: 600; background: #e8eefc; color: var(--primary); }
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; margin: .85rem 0; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+    textarea { width: 100%; height: 220px; padding: .75rem; font-family: inherit; font-size: .92rem; border: 1px solid var(--border); border-radius: 8px; resize: vertical; }
+    .row { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: .75rem; }
+    select, input[type=file] { padding: .42rem .6rem; border: 1px solid var(--border); border-radius: 6px; background: #fff; font-size: .9rem; }
+    button { padding: .5rem 1rem; border: 0; border-radius: 6px; background: var(--primary); color: #fff; font-weight: 600; cursor: pointer; font-size: .88rem; }
+    button:hover { background: var(--primary-hover); }
+    button.secondary { background: #e9eef8; color: var(--text); }
+    button.secondary:hover { background: #d9e2f3; }
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; margin: .85rem 0; }
+    .metric { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .85rem 1rem; }
+    .metric .label { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .metric .val { font-size: 1.45rem; font-weight: 700; margin-top: .2rem; }
+    .tag { display: inline-block; padding: .15rem .55rem; border-radius: 99px; font-size: .76rem; font-weight: 600; color: #fff; vertical-align: middle; }
+    .Standard, .Present, .Low { background: var(--ok); }
+    .Unusual, .Moderate { background: var(--warn); }
+    .One-sided, .Missing, .High, .Error { background: var(--danger); }
+    .Incomplete { background: var(--info); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .95rem 1.15rem; margin: .75rem 0; }
+    blockquote { margin: .5rem 0; padding: .45rem .8rem; border-left: 3px solid var(--primary); background: #f8faff; color: #364152; font-size: .88rem; border-radius: 0 6px 6px 0; }
+    pre { background: #161b26; color: #e6edf3; padding: .85rem; border-radius: 8px; overflow-x: auto; font-size: .8rem; white-space: pre-wrap; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--border); }
+    th { background: #f8faff; color: var(--muted); font-weight: 600; }
+    .warn { color: var(--danger); font-size: .85rem; }
+    .muted { color: var(--muted); font-size: .85rem; }
+    .q-item { padding: .45rem 0; border-bottom: 1px dashed var(--border); font-size: .9rem; }
+    .q-item:last-child { border-bottom: 0; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1>Rental Agreement Explainer</h1>
+      <div class="muted">Clause-level, evidence-quoting prompt engineering pipeline for residential leases.</div>
+    </div>
+    <span class="badge" id="backendBadge">Backend: {{ backend }}</span>
+  </header>
+
+  <div class="panel">
+    <textarea id="text" placeholder="Paste your residential rental agreement text here, or click 'Load Sample Lease'..."></textarea>
+    <div class="row">
+      <label>Strategy:
+        <select id="strategy">
+          {% for s in strategies %}
+          <option value="{{ s }}" {% if s == 'few_shot' %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button onclick="runAnalyze()">Explain Lease</button>
+      <button class="secondary" onclick="loadSample()">Load Sample Lease</button>
+      <button class="secondary" onclick="togglePromptPreview()">Inspect Prompt</button>
+      <button class="secondary" onclick="runCompare()">Compare Strategies</button>
+      <button class="secondary hidden" id="exportBtn" onclick="exportMarkdown()">Export Report (.md)</button>
+      <label class="muted" style="margin-left:auto;">
+        Upload .txt: <input type="file" id="fileInput" accept=".txt,text/plain" onchange="loadFile(event)">
+      </label>
+    </div>
+    <div id="status" class="muted" style="margin-top:.45rem;"></div>
+  </div>
+
+  <div id="promptDrawer" class="panel hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <b>4-Part Prompt Anatomy Inspector (<span id="promptStrat"></span>)</b>
+      <button class="secondary" onclick="document.getElementById('promptDrawer').classList.add('hidden')">Close</button>
+    </div>
+    <p class="muted">System Prompt (Instructions + Label Definitions + Output Constraints):</p>
+    <pre id="promptSystem"></pre>
+    <p class="muted">User Prompt (Few-Shot Examples + Input Context Clause):</p>
+    <pre id="promptUser"></pre>
+  </div>
+
+  <div id="compareOut"></div>
+  <div id="out"></div>
 </div>
-<div id="out"></div>
+
 <script>
-const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-async function run(){
-  const out=document.getElementById("out"),st=document.getElementById("status");
-  st.textContent="Analyzing..."; out.innerHTML="";
-  const r=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({text:document.getElementById("text").value,strategy:document.getElementById("strategy").value})});
-  const d=await r.json(); st.textContent="";
-  if(d.error){out.innerHTML=`<p class="warn">${esc(d.error)}</p>`;return;}
-  let h=`<div class="card panel"><b>Key Terms Summary</b>`;
-  h+=d.key_terms.map(k=>`
-    <div style="margin:0.5rem 0; padding-bottom:0.4rem; border-bottom:1px solid #eee;">
-      <div>• <b>${esc(k.category || k.key)}</b> (${esc(k.key)})
-        ${k.section_ref && k.section_ref !== 'Not Found' ? `<span class="muted">[${esc(k.section_ref)}]</span>` : ''}: 
-        <span class="tag ${esc(k.status || k.label)}">${esc(k.status || k.label)}</span>
-        <span class="muted" style="font-size:0.8rem; margin-left:0.4rem;">
-          [Presence: <b>${esc(k.presence)}</b> | Completeness: <b>${esc(k.completeness)}</b> | Compliance: <b>${esc(k.legal_compliance)}</b> | Risk: <b>${esc(k.risk_level)}</b>]
-        </span>
-      </div>
-      ${k.verification_type ? `<div style="font-size:0.82rem; color:#2d5be3; margin-top:0.1rem;">Verification Detail: <b>${esc(k.verification_type)}</b></div>` : ''}
-      ${k.registration_type ? `<div style="font-size:0.82rem; color:#2d5be3; margin-top:0.1rem;">Registration Detail: <b>${esc(k.registration_type)}</b></div>` : ''}
-      <div class="muted" style="font-size:0.85rem; margin-top:0.1rem;">${esc(k.description)}</div>
-      ${k.quote?`<blockquote style="margin-top:0.2rem;">${esc(k.quote)}</blockquote>`:""}
-    </div>`).join("")||"<div class='muted'>None detected</div>";
-  h+=`</div><div class="card panel"><b>Agreement Checklist</b>`;
-  const cleanList = (arr) => Array.from(new Set(arr || []));
-  if (d.checklist.present && d.checklist.present.length) {
-    h+=`<div><span style="color:#2e8b57;font-weight:bold">✓ Present:</span> ${cleanList(d.checklist.present).map(esc).join(", ")}</div>`;
-  }
-  if (d.checklist.incomplete && d.checklist.incomplete.length) {
-    h+=`<div style="margin-top:0.3rem"><span style="color:#d98e04;font-weight:bold">⚠ Needs Details / Incomplete:</span> ${cleanList(d.checklist.incomplete).map(esc).join(", ")}</div>`;
-  }
-  if (d.checklist.missing && d.checklist.missing.length) {
-    h+=`<div style="margin-top:0.3rem"><span class="warn" style="font-weight:bold">✗ Missing from agreement:</span> ${cleanList(d.checklist.missing).map(esc).join(", ")}</div>`;
-  }
-  h+=`</div>`;
-  h+=`<p class="muted">Faithfulness: ${d.stats.verified_quotes}/${d.stats.n_clauses} quotes verified</p>`;
-  h+=d.clauses.map(c=>`<div class="card"><span class="tag ${c.label}">${c.label}</span> ${c.is_incomplete?`<span class="tag Incomplete">Needs Details</span>`:""} <b>${esc(c.clause_type)}</b>
-    <p>${esc(c.explanation)}</p><div class="muted">${esc(c.label_reason)}</div>
-    ${c.error?`<div class="warn">⚠ ${esc(c.error)}</div>`:
-      `<blockquote>${esc(c.quote)} ${c.verified?"✓ verified":"<span class='warn'>⚠ quote not found, treat with caution</span>"}</blockquote>`}
-    ${c.advice?`<div class="warn">${esc(c.advice)}</div>`:""}</div>`).join("");
-  h+=`<p class="muted">${esc(d.disclaimer)}</p>`; out.innerHTML=h;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let lastResult = null;
+
+function loadFile(ev) {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = e => { document.getElementById("text").value = e.target.result; };
+  reader.readAsText(f);
 }
-</script></body></html>
+
+async function loadSample() {
+  const st = document.getElementById("status");
+  st.textContent = "Loading sample lease...";
+  const r = await fetch("/api/sample");
+  const d = await r.json();
+  st.textContent = d.title ? `Loaded sample: ${d.title}` : "";
+  if (d.text) document.getElementById("text").value = d.text;
+}
+
+async function togglePromptPreview() {
+  const drawer = document.getElementById("promptDrawer");
+  const strategy = document.getElementById("strategy").value;
+  const raw = document.getElementById("text").value.trim();
+  const sampleClause = raw ? raw.split(/\n\s*\n/).find(x => x.length > 40) || raw.slice(0, 260) : "";
+  const r = await fetch("/api/prompt-preview", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({strategy, clause: sampleClause})
+  });
+  const d = await r.json();
+  document.getElementById("promptStrat").textContent = d.strategy;
+  document.getElementById("promptSystem").textContent = d.system;
+  document.getElementById("promptUser").textContent = d.user;
+  drawer.classList.remove("hidden");
+}
+
+async function runCompare() {
+  const text = document.getElementById("text").value.trim();
+  const st = document.getElementById("status"), cmp = document.getElementById("compareOut");
+  if (!text) { cmp.innerHTML = `<p class="warn">Please paste an agreement or click Load Sample Lease first.</p>`; return; }
+  st.textContent = "Comparing strategies (zero_shot, few_shot, cot, self_consistency)...";
+  cmp.innerHTML = "";
+  const r = await fetch("/api/compare", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({text})
+  });
+  const d = await r.json();
+  st.textContent = "";
+  if (d.error) { cmp.innerHTML = `<div class="panel"><p class="warn">${esc(d.error)}</p></div>`; return; }
+  const rows = d.comparisons.map(x => `
+    <tr>
+      <td><b>${esc(x.strategy)}</b></td>
+      <td>${x.verified_quotes}/${x.n_clauses} (${Math.round(x.faithfulness * 100)}%)</td>
+      <td>${x.tenant_safety_score}/100</td>
+      <td>${x.counts.standard} Std / ${x.counts.unusual} Unus / ${x.counts.one_sided} One-sided</td>
+    </tr>`).join("");
+  cmp.innerHTML = `<div class="panel"><b>Strategy Comparison</b>
+    <table style="margin-top:.5rem;"><thead><tr><th>Strategy</th><th>Quote Faithfulness</th><th>Tenant Safety Score</th><th>Label Distribution</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+
+async function runAnalyze() {
+  const out = document.getElementById("out"), st = document.getElementById("status");
+  st.textContent = "Analyzing clauses..."; out.innerHTML = "";
+  document.getElementById("exportBtn").classList.add("hidden");
+  const r = await fetch("/api/analyze", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({text: document.getElementById("text").value, strategy: document.getElementById("strategy").value})
+  });
+  const d = await r.json();
+  st.textContent = "";
+  if (d.error) { out.innerHTML = `<div class="panel"><p class="warn">${esc(d.error)}</p></div>`; return; }
+  lastResult = d;
+  document.getElementById("exportBtn").classList.remove("hidden");
+  if (d.backend) document.getElementById("backendBadge").textContent = `Backend: ${d.backend}`;
+
+  const rs = d.risk_summary || {tenant_safety_score: 0, risk_grade: "Unknown", counts: {}};
+  const gradeCls = rs.risk_grade.split(" ")[0];
+  let h = `<div class="metrics">
+    <div class="metric"><div class="label">Tenant Safety Score</div><div class="val">${rs.tenant_safety_score}/100 <span class="tag ${esc(gradeCls)}">${esc(rs.risk_grade)}</span></div></div>
+    <div class="metric"><div class="label">Quote Faithfulness</div><div class="val">${d.stats.verified_quotes}/${d.stats.n_clauses} (${Math.round(d.stats.faithfulness * 100)}%)</div></div>
+    <div class="metric"><div class="label">Checklist Coverage</div><div class="val">${Math.round((d.stats.checklist_coverage || 0) * 100)}%</div></div>
+    <div class="metric"><div class="label">Flagged Clauses</div><div class="val">${rs.counts.one_sided || 0} One-sided · ${rs.counts.unusual || 0} Unusual</div></div>
+  </div>`;
+
+  if (d.negotiation_questions && d.negotiation_questions.length) {
+    h += `<div class="panel"><b>Questions to Ask Your Landlord Before Signing</b><div style="margin-top:.45rem;">` +
+      d.negotiation_questions.map(q => `
+        <div class="q-item"><span class="tag ${esc(q.severity)}">${esc(q.severity)}</span> ${esc(q.question)}</div>`).join("") +
+      `</div></div>`;
+  }
+
+  const presentTitles = d.key_terms.filter(k => k.status === "Present").map(k => k.title);
+  const incompleteTitles = d.key_terms.filter(k => k.status === "Incomplete").map(k => k.title);
+  const missingTitles = d.key_terms.filter(k => k.status === "Missing").map(k => k.title);
+
+  h += `<div class="panel"><b>13-Point Tenancy Checklist</b>`;
+  if (presentTitles.length) h += `<div style="margin-top:.4rem;"><span style="color:var(--ok);font-weight:700;">✓ Present (${presentTitles.length}):</span> ${presentTitles.map(esc).join(", ")}</div>`;
+  if (incompleteTitles.length) h += `<div style="margin-top:.3rem;"><span style="color:var(--warn);font-weight:700;">⚠ Incomplete (${incompleteTitles.length}):</span> ${incompleteTitles.map(esc).join(", ")}</div>`;
+  if (missingTitles.length) h += `<div style="margin-top:.3rem;"><span class="warn" style="font-weight:700;">✗ Missing (${missingTitles.length}):</span> ${missingTitles.map(esc).join(", ")}</div>`;
+  h += `</div>`;
+
+  h += `<div class="panel"><b>Key Terms Summary</b>` +
+    (d.key_terms.map(k => `
+      <div style="margin:.55rem 0;padding-bottom:.45rem;border-bottom:1px solid var(--border);">
+        <div><b>${esc(k.category || k.key)}</b> ${k.section_ref && k.section_ref !== "Not Found" ? `<span class="muted">[${esc(k.section_ref)}]</span>` : ""}
+          <span class="tag ${esc(k.status || k.label)}">${esc(k.status || k.label)}</span>
+          <span class="muted" style="margin-left:.35rem;">Presence: <b>${esc(k.presence)}</b> | Completeness: <b>${esc(k.completeness)}</b> | Risk: <b>${esc(k.risk_level)}</b></span>
+        </div>
+        ${k.verification_type ? `<div style="font-size:.82rem;color:var(--primary);margin-top:.1rem;">Verification Detail: <b>${esc(k.verification_type)}</b></div>` : ""}
+        ${k.registration_type ? `<div style="font-size:.82rem;color:var(--primary);margin-top:.1rem;">Registration Detail: <b>${esc(k.registration_type)}</b></div>` : ""}
+        <div class="muted" style="margin-top:.1rem;">${esc(k.description)}</div>
+        ${k.quote ? `<blockquote>${esc(k.quote)}</blockquote>` : ""}
+      </div>`).join("") || `<div class="muted">None detected</div>`) + `</div>`;
+
+  h += `<h3>Clause-by-Clause Explanation (${esc(d.strategy)})</h3>`;
+  h += d.clauses.map(c => `<div class="card">
+    <div>
+      <span class="tag ${esc(c.label)}">${esc(c.label)}</span>
+      ${c.is_incomplete ? `<span class="tag Incomplete">Needs Details</span>` : ""}
+      ${c.vote_agreement ? `<span class="badge" style="margin-left:.3rem;">Votes: ${esc(c.vote_agreement)}</span>` : ""}
+      <b style="margin-left:.35rem;">Clause ${c.clause_id}: ${esc(c.clause_type)}</b>
+    </div>
+    <p style="margin:.5rem 0;">${esc(c.explanation)}</p>
+    <div class="muted">${esc(c.label_reason)}</div>
+    ${c.reasoning ? `<div class="muted" style="margin-top:.25rem;font-style:italic;">CoT Reasoning: ${esc(c.reasoning)}</div>` : ""}
+    ${c.error ? `<div class="warn">⚠ ${esc(c.error)}</div>` :
+      `<blockquote>${esc(c.quote)} ${c.verified ? `<b style="color:var(--ok);">✓ verified</b>` : `<span class="warn">⚠ quote not found, treat with caution</span>`}</blockquote>`}
+    ${c.advice ? `<div class="warn">${esc(c.advice)}</div>` : ""}
+  </div>`).join("");
+
+  h += `<p class="muted">${esc(d.disclaimer)}</p>`;
+  out.innerHTML = h;
+}
+
+function exportMarkdown() {
+  if (!lastResult) return;
+  const d = lastResult;
+  const lines = [
+    `# Rental Agreement Analysis Report`,
+    `- **Strategy:** ${d.strategy} | **Backend:** ${d.backend}`,
+    `- **Tenant Safety Score:** ${d.risk_summary.tenant_safety_score}/100 (${d.risk_summary.risk_grade})`,
+    `- **Quote Faithfulness:** ${d.stats.verified_quotes}/${d.stats.n_clauses} (${Math.round(d.stats.faithfulness * 100)}%)`,
+    "", "## Questions to Ask Your Landlord",
+    ...d.negotiation_questions.map(q => `- **[${q.severity}]** ${q.question}`),
+    "", "## Clause-by-Clause Breakdown",
+    ...d.clauses.map(c => `### Clause ${c.clause_id} (${c.clause_type}) — ${c.label}\n${c.explanation}\n> "${c.quote}" (${c.verified ? "verified" : "unverified"})\n`),
+    `---`, d.disclaimer
+  ];
+  const blob = new Blob([lines.join("\n")], {type: "text/markdown"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "rental-agreement-report.md";
+  a.click();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "indian_residential_sample_1",
+    "title": "Standard Bengaluru 11-Month Residential Lease (with 2 risky & 1 incomplete clause)",
+    "text": "RESIDENTIAL RENTAL AGREEMENT\n\nThis Rental Agreement is made between the Lessor (Landlord) and the Lessee (Tenant) for the residential premises situated at Indiranagar, Bengaluru.\n\n1. MONTHLY RENT: The Lessee shall pay a monthly rent of Rs. 28,000 on or before the 5th day of each English calendar month by bank transfer.\n\n2. SECURITY DEPOSIT: The Lessee has paid an interest-free refundable Security Deposit of Rs. 1,50,000, which shall be refunded within 30 days of vacating the premises after deducting actual damages beyond normal wear and tear.\n\n3. LOCK-IN PERIOD: Both parties agree to a mandatory lock-in period of 6 months from the commencement date. If the Lessee vacates before 6 months, the entire Security Deposit shall stand forfeited and the Lessor may recover further losses at his sole discretion.\n\n4. NOTICE PERIOD: After the lock-in period, either party may terminate this agreement by giving 1 month prior written notice to the other party.\n\n5. RENT INCREASE: Upon renewal after 11 months, the monthly rent shall be enhanced by 5% subject to mutual written consent.\n\n6. MAINTENANCE AND REPAIRS: The Lessee shall bear minor day-to-day maintenance and consumables, while the Lessee shall also pay for all exterior and structural repairs and mandatory painting charges of one month rent regardless of flat condition.\n\n7. LANDLORD ENTRY AND INSPECTION: The Lessor reserves the right to enter the premises at any time without prior notice for inspection or showing the flat to prospective tenants.\n\n8. SUBLETTING: The Lessee shall not sublet, assign, or part with possession of the premises without the prior written consent of the Lessor.\n\n9. UTILITIES AND OTHER CHARGES: The Lessee shall pay electricity bills, water charges, and internet charges as per actual meter readings.\n\n10. POLICE VERIFICATION: The Lessee shall submit Aadhaar and identity documents for police verification at the local police station within 15 days of occupancy.\n\n11. REGISTRATION AND STAMP DUTY: The stamp duty and registration charges for this agreement shall be borne equally by both parties on [Date] for Rs. [Amount].",
+    "gold_clauses": [
+      {"clause_id": 1, "clause_type": "rent", "label": "Standard", "is_incomplete": false},
+      {"clause_id": 2, "clause_type": "deposit", "label": "Standard", "is_incomplete": false},
+      {"clause_id": 3, "clause_type": "lock_in", "label": "One-sided", "is_incomplete": false},
+      {"clause_id": 4, "clause_type": "notice_period", "label": "Standard", "is_incomplete": false},
+      {"clause_id": 5, "clause_type": "rent_increase", "label": "Standard", "is_incomplete": false},
+      {"clause_id": 6, "clause_type": "maintenance", "label": "Unusual", "is_incomplete": false},
+      {"clause_id": 7, "clause_type": "landlord_entry", "label": "One-sided", "is_incomplete": false},
+      {"clause_id": 8, "clause_type": "subletting", "label": "Standard", "is_incomplete": false},
+      {"clause_id": 9, "clause_type": "utilities", "label": "Standard", "is_incomplete": false},
+      {"clause_id": 10, "clause_type": "police_verification", "label": "Standard", "is_incomplete": false},
+      {"clause_id": 11, "clause_type": "registration", "label": "Standard", "is_incomplete": true}
+    ]
+  },
+  {
+    "id": "student_pg_lease_sample_2",
+    "title": "Student Flat Agreement (curfew & unilateral termination)",
+    "text": "RESIDENTIAL LEASE AGREEMENT\n\nThis Lease Agreement is executed between the Landlord and the Tenant for residential premises near Koramangala.\n\n1. MONTHLY RENT: The Tenant agrees to pay monthly rent of Rs. 18,000 on or before the 5th of every month.\n\n2. SECURITY DEPOSIT: The Tenant shall deposit Rs. 50,000 refundable within 30 days of handover after deducting verified unpaid bills.\n\n3. LOCK-IN PERIOD: Both parties agree to a lock-in period of 3 months from the start date.\n\n4. TERMINATION CONDITIONS: The Landlord may terminate this tenancy with 7 days notice at his sole discretion, whereas the Tenant must provide 60 days prior written notice.\n\n5. USE OF PREMISES: The premises shall be used strictly for residential purposes and no guests or visitors are allowed after 9 PM curfew.\n\n6. UTILITIES AND OTHER CHARGES: Electricity and water bills shall be paid directly by the Tenant based on monthly bills.\n\n7. DISPUTE RESOLUTION: Any dispute arising out of this agreement shall be subject to the jurisdiction of competent civil courts in Bengaluru.",
+    "gold_clauses": [
+      {"clause_id": 1, "clause_type": "rent", "label": "Standard", "is_incomplete": false},
+      {"clause_id": 2, "clause_type": "deposit", "label": "Standard", "is_incomplete": false},
+      {"clause_id": 3, "clause_type": "lock_in", "label": "Standard", "is_incomplete": false},
+      {"clause_id": 4, "clause_type": "termination", "label": "One-sided", "is_incomplete": false},
+      {"clause_id": 5, "clause_type": "use_of_premises", "label": "Unusual", "is_incomplete": false},
+      {"clause_id": 6, "clause_type": "utilities", "label": "Standard", "is_incomplete": false},
+      {"clause_id": 7, "clause_type": "dispute_resolution", "label": "Standard", "is_incomplete": false}
+    ]
+  }
+]

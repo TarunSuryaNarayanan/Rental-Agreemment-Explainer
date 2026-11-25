@@ -12,6 +12,7 @@ CLAUSE_TYPES = [
     "use_of_premises", "renewal", "dispute_resolution", "police_verification", "registration", "other",
 ]
 LABELS = ["Standard", "Unusual", "One-sided"]
+STRATEGIES = ["zero_shot", "persona", "template", "few_shot", "cot", "self_consistency"]
 
 # ---- 2. SYSTEM INSTRUCTIONS (several paraphrases for the sensitivity study) ----
 INSTRUCTION_VARIANTS = [
@@ -137,11 +138,11 @@ def build_prompt(clause: str, strategy: str = "few_shot", variant: int = 0, doc_
     system_parts.append(LABEL_DEFINITIONS)
     if strategy == "template":
         system_parts.append(TEMPLATE_EXTRA)
-    system_parts.append(OUTPUT_CONSTRAINTS + (COT_EXTRA if strategy == "cot" else ""))
+    system_parts.append(OUTPUT_CONSTRAINTS + (COT_EXTRA if strategy in ("cot", "self_consistency") else ""))
     system = "\n\n".join(system_parts)
 
     user_parts = []
-    if strategy == "few_shot":
+    if strategy in ("few_shot", "self_consistency"):
         for ex in FEW_SHOT:
             user_parts.append(f"<clause>{ex['clause']}</clause>\n{json.dumps(ex['out'])}")
         user_parts.append("Now the real clause:")

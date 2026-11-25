@@ -35,3 +35,28 @@ def test_checklist():
 def test_pipeline_mock():
     out = analyze(DOC)
     assert out["stats"]["n_clauses"] >= 7
+    assert "risk_summary" in out
+    assert 0 <= out["risk_summary"]["tenant_safety_score"] <= 100
+    assert isinstance(out["negotiation_questions"], list)
+    assert len(out["negotiation_questions"]) >= 1
+
+
+def test_self_consistency_voting():
+    out = analyze(DOC, strategy="self_consistency")
+    assert out["stats"]["n_clauses"] >= 7
+    assert all("vote_agreement" in c for c in out["clauses"])
+
+
+def test_flask_endpoints():
+    from app import app
+    client = app.test_client()
+    assert client.get("/").status_code == 200
+    sample = client.get("/api/sample")
+    assert sample.status_code == 200
+    assert "text" in sample.get_json()
+    preview = client.post("/api/prompt-preview", json={"strategy": "cot"})
+    assert preview.status_code == 200
+    assert "reasoning" in preview.get_json()["system"]
+    cmp_resp = client.post("/api/compare", json={"text": DOC})
+    assert cmp_resp.status_code == 200
+    assert len(cmp_resp.get_json()["comparisons"]) >= 3
